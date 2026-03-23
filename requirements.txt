@@ -1,7 +1,6 @@
-langchain==0.3.1
-langchain-community==0.3.1
-langchain-ollama==0.2.0
-langchain-chroma==0.1.4
-chromadb==0.5.3
-pypdf==4.3.1
-unstructured==0.15.0
+langchain
+langchain-ollama
+langchain-chroma
+langchain-community
+pypdf
+pymupdf
