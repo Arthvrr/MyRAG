@@ -1,6 +1,4 @@
 - ajouter interface graphique des vecteurs pour y voir plus clair
 - ajouter mémoire
 - interface de llm avec fenêtre (tkinter en plus moderne)
-- pymupdf4llm
-- reranking
-- multi query retrieval
+- ajouter lecture de csv, xlsx
