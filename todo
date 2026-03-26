@@ -2,3 +2,8 @@
 - ajouter mémoire
 - interface de llm avec fenêtre (tkinter en plus moderne)
 - ajouter lecture de csv, xlsx
+
+1. rendre l'IA très bonne/meilleure dans la recherche de documents
+2. ajouter à l'IA la possibilité de m'expliquer ce qui n'est pas du tout dans les documents 
+3. ajouter mémoire à l'IA
+4. ajouter possibilité de soumettre un path, et l'IA ira créer sa base vectorielle à partir de ça 

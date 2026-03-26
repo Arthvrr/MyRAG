@@ -8,14 +8,20 @@ from vector import retriever
 model = OllamaLLM(model="llama3") 
 
 # 2. Créer le template (Comme fait Tim)
-template = """Tu es un assistant expert pour m'aider à analyser mes documents personnels.
-Voici les documents pertinents trouvés : 
+template = """Tu es MyRAG, l'assistant personnel d'Arthur.
+
+Voici le contexte extrait des documents personnels d'Arthur : 
 {context}
 
-Voici ma question :
+Voici la question d'Arthur :
 {question}
 
-Réponds en français en te basant uniquement sur les documents ci-dessus.
+INSTRUCTIONS STRICTES :
+1. Réponds de manière CLAIRE, DIRECTE et CONCISE. Va droit au but.
+2. Ne justifie pas ta réponse en racontant comment tu as trouvé l'information, donne simplement la réponse.
+3. Ne cite pas les phrases du contexte en entier, extrais uniquement l'information demandée.
+4. Ne dis jamais "Dans le document X j'ai trouvé...", réponds naturellement comme un humain.
+5. Si la réponse n'est pas dans le contexte, dis-le poliment.
 """
 
 prompt = ChatPromptTemplate.from_template(template)
@@ -51,6 +57,12 @@ while True:
     
     # b. Extraire le texte de ces documents
     context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
+
+
+    print(f"\n{SYS_COLOR}[DEBUG] --- Ce que l'IA a trouvé et s'apprête à lire : ---{RESET_COLOR}")
+    print(context_text)
+    print(f"{SYS_COLOR}----------------------------------------------------------{RESET_COLOR}\n")
+    # ==========================================
     
     # c. Poser la question au LLM avec le contexte
     result = chain.invoke({"context": context_text, "question": question})
@@ -62,3 +74,12 @@ while True:
     print(f"\n{BOT_COLOR}🤖 MyRAG :{RESET_COLOR}")
     print(f"{BOT_COLOR}{result}{RESET_COLOR}\n")
     print(f"\n{SYS_COLOR}[⏱️ Temps de traitement : {elapsed_time} secondes]{RESET_COLOR}\n")
+
+    # ==========================================
+    # 📂 AFFICHAGE DES SOURCES UTILISÉES EN RÉSUMÉ
+    # ==========================================
+    sources_utilisees = set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs])
+    print(f"{SYS_COLOR}📂 Sources consultées pour le contexte :{RESET_COLOR}")
+    for source in sorted(sources_utilisees):
+        print(f"{SYS_COLOR}  - {source}{RESET_COLOR}")
+    print("\n")
