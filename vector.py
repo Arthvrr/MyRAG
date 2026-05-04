@@ -1,11 +1,19 @@
 import os
-from langchain_community.document_loaders import DirectoryLoader, PyMuPDFLoader, TextLoader # CHANGEMENT ICI
+from langchain_community.document_loaders import DirectoryLoader, PyMuPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 
-# Configuration
-USER_DOCS_PATH = "./data"
+
+PATH_FILE = ".current_path.txt"
+
+# Si le post-it existe, on lit le chemin dedans. Sinon, par défaut c'est "./data"
+if os.path.exists(PATH_FILE):
+    with open(PATH_FILE, "r") as f:
+        USER_DOCS_PATH = f.read().strip()
+else:
+    USER_DOCS_PATH = "./data"
+
 VECTOR_STORE_DIR = "./chroma_db"
 
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
@@ -27,15 +35,24 @@ if not os.path.exists(VECTOR_STORE_DIR):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     all_splits = text_splitter.split_documents(documents)
     
-    # Sauvegarder dans Chroma
-    vector_store = Chroma.from_documents(
-        documents=all_splits, 
-        embedding=embeddings, 
-        persist_directory=VECTOR_STORE_DIR
-    )
-    print("Base vectorielle créée avec succès !")
+    if not all_splits:
+        print(f"❌ Aucun texte n'a pu être extrait du dossier : {USER_DOCS_PATH}")
+        print("👉 Vérifie que le dossier contient bien des PDF/TXT et que le Terminal a le droit de le lire.")
+    else:
+        # Sauvegarder dans Chroma (seulement si on a du contenu)
+        vector_store = Chroma.from_documents(
+            documents=all_splits, 
+            embedding=embeddings, 
+            persist_directory=VECTOR_STORE_DIR
+        )
+        print(f"\nBase vectorielle créée avec succès ! ({len(all_splits)} morceaux générés)")
+        print("📂 Fichiers ingérés dans la base :")
+        
+        sources_uniques = set([doc.metadata.get('source', 'Source inconnue') for doc in all_splits])
+        for source in sorted(sources_uniques):
+            print(f"  ✅ {source}")
 else:
-    print("Chargement de la base vectorielle existante...")
+    print(f"🔄 Chargement de la base vectorielle existante (Source : {USER_DOCS_PATH})...")
     vector_store = Chroma(
         persist_directory=VECTOR_STORE_DIR, 
         embedding_function=embeddings

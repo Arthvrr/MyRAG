@@ -2,7 +2,9 @@ import time
 import os
 from langchain_ollama.llms import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
-from vector import retriever 
+from vector import retriever, USER_DOCS_PATH
+
+DEBUG_MODE = False
 
 # 1. Initialiser le modèle (Vérifie le nom de ton modèle, Llama3 ou llama3.2)
 model = OllamaLLM(model="llama3") 
@@ -37,8 +39,8 @@ RESET_COLOR = '\033[0m'    # Réinitialise la couleur
 print(f"\n{SYS_COLOR}======================================================{RESET_COLOR}")
 print(f"{SYS_COLOR}   🧠 BIENVENUE DANS MyRAG - TON ASSISTANT LOCAL 🤖   {RESET_COLOR}")
 print(f"{SYS_COLOR}======================================================{RESET_COLOR}")
-print(f"{SYS_COLOR}[Système] Base vectorielle chargée. Prêt à répondre.{RESET_COLOR}")
-print(f"{SYS_COLOR}[Système] Tape 'q' pour quitter.{RESET_COLOR}\n")
+print(f"{SYS_COLOR}[Système] Base vectorielle chargée depuis : 📂 {USER_DOCS_PATH}{RESET_COLOR}")
+print(f"{SYS_COLOR}[Système] Prêt à répondre. Tape 'q' pour quitter.{RESET_COLOR}\n")
 
 while True:
     print(f"{USER_COLOR}------------------------------------------------------{RESET_COLOR}")
@@ -59,10 +61,10 @@ while True:
     context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
 
 
-    print(f"\n{SYS_COLOR}[DEBUG] --- Ce que l'IA a trouvé et s'apprête à lire : ---{RESET_COLOR}")
-    print(context_text)
-    print(f"{SYS_COLOR}----------------------------------------------------------{RESET_COLOR}\n")
-    # ==========================================
+    if DEBUG_MODE:
+        print(f"\n{SYS_COLOR}[DEBUG] --- Ce que l'IA a trouvé et s'apprête à lire : ---{RESET_COLOR}")
+        print(f"{SYS_COLOR}{context_text}{RESET_COLOR}")
+        print(f"{SYS_COLOR}----------------------------------------------------------{RESET_COLOR}\n")
     
     # c. Poser la question au LLM avec le contexte
     result = chain.invoke({"context": context_text, "question": question})
