@@ -4,3 +4,5 @@ langchain-chroma
 langchain-community
 pypdf
 pymupdf
+fastapi
+uvicorn

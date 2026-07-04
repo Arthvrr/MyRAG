@@ -7,3 +7,17 @@
 2. ajouter à l'IA la possibilité de m'expliquer ce qui n'est pas du tout dans les documents 
 3. ajouter mémoire à l'IA
 4. ajouter possibilité de soumettre un path, et l'IA ira créer sa base vectorielle à partir de ça 
+
+
+- faire interface graphique sur localhost sur le web
+
+🧠 Améliorations du Moteur (Backend & RAG)
+L'Effet "Machine à Écrire" (Streaming) : Actuellement, tu attends quelques secondes et le gros bloc de texte apparaît d'un coup. En utilisant les Server-Sent Events (SSE) avec FastAPI, tu peux faire en sorte que l'IA affiche sa réponse mot par mot en temps réel, exactement comme ChatGPT.
+Mémoire de Conversation : Pour l'instant, ton IA est amnésique à chaque question. Intégrer un module comme ConversationBufferMemory dans LangChain permettrait de faire des suivis. (Exemple : "Quel est le totem de Gaspard ?" puis "Et quelle est son adresse email ?").
+Calibration et Score de Confiance : Pour limiter les hallucinations, tu pourrais implémenter une logique de calibration sur tes modèles. L'idée serait d'évaluer la certitude de la réponse générée face aux documents extraits, et d'afficher un petit badge de "confiance" (ex: 🟢 Haute, 🔴 Faible) à côté de chaque message.
+Reranking (Reclassement) : Quand tu as des centaines de documents, extraire les 10 meilleurs morceaux ne suffit pas toujours. Ajouter un modèle de Cross-Encoder léger juste avant de donner le texte au LLM permet de trier les morceaux trouvés par pertinence absolue.
+🎨 Améliorations de l'Interface (index.html)
+Rendu Markdown Dynamique : Si ton IA génère du code, des listes à puces ou du texte en gras, ton interface actuelle ne le comprend pas très bien. Intégrer une petite librairie JavaScript comme marked.js permettrait de rendre l'affichage des réponses riche et structuré.
+Encapsulation macOS Native : Puisque tu développes des applications natives pour macOS, tu pourrais complètement te passer de Safari ! Il te suffirait de créer une petite app avec une WKWebView qui pointe vers ton port localhost. MyRAG deviendrait un vrai logiciel dans ton Dock, avec sa propre icône.
+Gestion des Erreurs Élégante (Toasts) : Remplacer les messages d'erreur textuels ("Erreur réseau") par des notifications "Toast" stylisées qui apparaissent en bas de l'écran puis disparaissent.
+Bouton d'Export : Ajouter un bouton pour télécharger l'historique de la conversation au format PDF ou TXT. Très utile si l'IA t'a fait un super résumé d'un long document !
