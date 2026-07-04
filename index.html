@@ -79,8 +79,8 @@
     </footer>
 
     <script>
-        // --- MÉMOIRE GLOBALE POUR SÉCURISER LES EXPORTS ---
-        const chatMemories = {};
+        // --- JOURNAL DE BORD GLOBAL DE LA CONVERSATION ---
+        const chatHistory = [];
 
         const chatBox = document.getElementById("chat");
         const inputField = document.getElementById("question");
@@ -92,13 +92,13 @@
         const sourceMenu = document.getElementById("source-menu");
         const plusBtn = document.getElementById("plus-btn");
 
-        // --- GESTION DES MENUS & THEMES ---
         function toggleSourceMenu() { sourceMenu.classList.toggle("hidden"); }
         document.addEventListener('click', function(event) {
             if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target) && !sourceMenu.classList.contains('hidden')) {
                 sourceMenu.classList.add("hidden");
             }
         });
+        
         function toggleTheme() {
             if (htmlElement.classList.contains('dark')) {
                 htmlElement.classList.remove('dark');
@@ -110,7 +110,6 @@
         }
         function handleKeyPress(e) { if (e.key === "Enter") askQuestion(); }
 
-        // --- TOASTS & EXPORTS SÉCURISÉS ---
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -127,62 +126,110 @@
             setTimeout(() => { toast.classList.add('opacity-0', 'scale-95'); setTimeout(() => toast.remove(), 300); }, 4000);
         }
 
-        async function exportText(messageId) {
-            const rawText = chatMemories[messageId];
-            if (!rawText) return;
+        // --- NOUVEL EXPORT TXT (HISTORIQUE COMPLET) ---
+        async function exportText() {
+            if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
 
-            const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; 
-            a.download = `MyRAG_${Date.now()}.txt`; 
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast("Document TXT téléchargé !");
+            let rawText = "🧠 Historique de conversation MyRAG\n";
+            rawText += "Date : " + new Date().toLocaleString() + "\n";
+            rawText += "====================================================\n\n";
+
+            chatHistory.forEach(msg => {
+                if (msg.role === 'user') {
+                    rawText += "👤 Vous : " + msg.content + "\n\n";
+                } else {
+                    rawText += "🤖 MyRAG :\n" + msg.content + "\n\n";
+                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) {
+                        rawText += "📂 Sources :\n- " + msg.meta.sources.join("\n- ") + "\n";
+                    }
+                    rawText += "----------------------------------------------------\n\n";
+                }
+            });
+
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: `MyRAG_Historique_${Date.now()}.txt`,
+                        types: [{ description: 'Fichier Texte', accept: {'text/plain': ['.txt']} }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(rawText);
+                    await writable.close();
+                    showToast("Historique TXT sauvegardé !");
+                } else {
+                    const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = `MyRAG_Historique_${Date.now()}.txt`; a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Historique TXT téléchargé !");
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') showToast("Erreur de sauvegarde", "error");
+            }
         }
 
-        // --- NOUVELLE FONCTION EXPORT PDF DIRECT ---
-        function exportPdf(messageId) {
-            const rawText = chatMemories[messageId];
-            if (!rawText) return;
-
+        // --- NOUVEL EXPORT PDF (HISTORIQUE COMPLET) ---
+        function exportPdf() {
+            if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
             showToast("Génération du PDF en cours...", "info");
 
-            const formattedContent = marked.parse(rawText);
-            const currentDate = new Date().toLocaleDateString();
+            const currentDate = new Date().toLocaleString();
+            let contentHtml = "";
 
-            // Création d'un conteneur invisible optimisé pour le PDF
+            chatHistory.forEach(msg => {
+                if (msg.role === 'user') {
+                    contentHtml += `
+                        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;">
+                            <strong style="color: #0284c7;">👤 Vous :</strong><br>
+                            <span style="font-size: 15px;">${msg.content}</span>
+                        </div>`;
+                } else {
+                    let metaHtml = "";
+                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) {
+                        metaHtml = `
+                            <div style="font-size: 11px; color: #6b7280; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                                <strong>📂 Sources :</strong><br>
+                                &bull; ${msg.meta.sources.join('<br>&bull; ')}
+                            </div>`;
+                    }
+                    contentHtml += `
+                        <div style="padding: 15px; margin-bottom: 30px;">
+                            <strong>🤖 MyRAG :</strong><br>
+                            <div style="line-height: 1.6; font-size: 15px; color: #374151; margin-top: 5px;">
+                                ${marked.parse(msg.content)}
+                            </div>
+                            ${metaHtml}
+                        </div>`;
+                }
+            });
+
             const pdfContainer = document.createElement('div');
             pdfContainer.innerHTML = `
-                <div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333;">
+                <div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     <div style="border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; font-size: 14px; color: #666;">
-                        <span style="font-weight: bold; color: #0ea5e9;">🧠 Assistant Local MyRAG</span>
+                        <span style="font-weight: bold; color: #0ea5e9;">🧠 Historique MyRAG Local</span>
                         <span>Date : ${currentDate}</span>
                     </div>
-                    <div style="line-height: 1.6; font-size: 15px;">
-                        ${formattedContent}
-                    </div>
+                    ${contentHtml}
                 </div>
             `;
 
-            // Configuration de html2pdf
             const opt = {
                 margin:       15,
-                filename:     `MyRAG_${Date.now()}.pdf`,
+                filename:     `MyRAG_Historique_${Date.now()}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Lancement de la sauvegarde directe
             html2pdf().set(opt).from(pdfContainer).save().then(() => {
-                showToast("Fichier PDF téléchargé !");
+                showToast("Historique PDF téléchargé !");
             }).catch(() => {
-                showToast("Erreur lors de la génération PDF", "error");
+                showToast("Erreur de génération PDF", "error");
             });
         }
 
-        // --- GESTION SOURCE ---
         async function handleSourceChange() {
             if (sourceSelect.value === "custom") {
                 try {
@@ -236,10 +283,12 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- CHAT EN STREAMING ---
         async function askQuestion() {
             const question = inputField.value.trim();
             if (!question) return;
+
+            // Enregistrement de la question de l'utilisateur dans l'historique
+            chatHistory.push({ role: "user", content: question });
 
             chatBox.innerHTML += `
             <div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end">
@@ -299,7 +348,12 @@
                                 if (data.metadata && !isFirstToken) {
                                     const metaContainer = document.getElementById(`meta-${loadingId}`);
                                     
-                                    chatMemories[loadingId] = accumulatedAnswer;
+                                    // Enregistrement de la réponse complète et de ses métadonnées
+                                    chatHistory.push({
+                                        role: "ai",
+                                        content: accumulatedAnswer,
+                                        meta: data.metadata
+                                    });
 
                                     let sourcesHtml = "";
                                     if (data.metadata.sources && data.metadata.sources.length > 0) {
@@ -312,13 +366,14 @@
                                         </div>`;
                                     }
                                     
+                                    // Les boutons d'export n'ont plus besoin d'ID de message, ils exportent l'historique complet
                                     metaContainer.innerHTML = sourcesHtml + `
                                         <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex gap-2 justify-end">
-                                            <button onclick="exportText('${loadingId}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
-                                                💾 Exporter en .txt
+                                            <button onclick="exportText()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                                                💾 Exporter l'historique (.txt)
                                             </button>
-                                            <button onclick="exportPdf('${loadingId}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
-                                                📄 Sauvegarder en PDF
+                                            <button onclick="exportPdf()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                                                📄 Exporter l'historique (.pdf)
                                             </button>
                                         </div>`;
                                     chatBox.scrollTop = chatBox.scrollHeight;
