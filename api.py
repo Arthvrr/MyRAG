@@ -68,6 +68,21 @@ def pick_folder():
     except subprocess.CalledProcessError:
         return {"path": ""}
 
+@app.get("/pick_file")
+def pick_file():
+    try:
+        script = """
+        tell application (path to frontmost application as text)
+            set filePath to choose file with prompt "Sélectionne le FICHIER pour MyRAG :"
+            return POSIX path of filePath
+        end tell
+        """
+        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
+        path = result.stdout.strip()
+        if path: return {"path": path}
+        return {"path": ""}
+    except subprocess.CalledProcessError: return {"path": ""}
+
 # --- FLUX EN STREAMING VIA SERVER-SENT EVENTS (SSE) ---
 @app.post("/chat")
 def chat(request: ChatRequest):

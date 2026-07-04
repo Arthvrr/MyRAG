@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAG - Local AI</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -15,24 +19,28 @@
         }
     </script>
     <style>
-        .prose pre { background-color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-family: monospace; margin: 0.5rem 0; }
-        .dark .prose pre { background-color: #1f2937; }
-        .prose code { background-color: #f3f4f6; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; }
-        .dark .prose code { background-color: #1f2937; }
+        /* Ajustements CSS pour le Markdown et le Code */
+        .prose pre { padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9em; }
+        
+        /* Code "en ligne" (un seul mot au milieu d'une phrase) */
+        .prose :not(pre) > code { 
+            background-color: #f3f4f6; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; color: #ef4444; 
+        }
+        .dark .prose :not(pre) > code { 
+            background-color: #1f2937; color: #fca5a5; 
+        }
+        
         .prose ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose p { margin-bottom: 0.5rem; }
         .prose h3 { font-weight: bold; margin-top: 0.75rem; color: #0ea5e9; }
         
-        /* Animation pour le micro quand il écoute */
         @keyframes pulse-red {
             0% { transform: translateY(-50%) scale(1); color: #ef4444; }
             50% { transform: translateY(-50%) scale(1.1); color: #dc2626; }
             100% { transform: translateY(-50%) scale(1); color: #ef4444; }
         }
-        .mic-listening {
-            animation: pulse-red 1.5s infinite;
-        }
+        .mic-listening { animation: pulse-red 1.5s infinite; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col font-sans transition-colors duration-300">
@@ -51,7 +59,7 @@
     <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 max-w-4xl w-full mx-auto pb-24">
         <div class="flex flex-col max-w-3xl self-start w-full">
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">
-                Bonjour Arthur ! Je suis branché sur ton Mac. Choisis un dossier ou pose-moi une question ! 🚀
+                Bonjour Arthur ! Je suis branché sur ton Mac. Choisis un dossier ou fichier (bouton +) ou pose-moi une question ! 🚀
             </div>
         </div>
     </main>
@@ -64,8 +72,9 @@
                     <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
                     
                     <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
-                        <option value="./data" class="dark:bg-gray-800">📁 ./data (Par défaut)</option>
-                        <option value="custom" class="dark:bg-gray-800">🔍 Parcourir le Mac...</option>
+                        <option value="./data" class="dark:bg-gray-800">📁 ./data (Défaut)</option>
+                        <option value="custom_folder" class="dark:bg-gray-800">📁 Parcourir un dossier...</option>
+                        <option value="custom_file" class="dark:bg-gray-800 text-brand font-bold">📄 Parcourir un fichier...</option>
                     </select>
                     
                     <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
@@ -88,10 +97,7 @@
 
             <div class="relative flex-1">
                 <input type="text" id="question" placeholder="Pose une question..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
-                
-                <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1" title="Dicter la question">
-                    🎤
-                </button>
+                <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1" title="Dicter la question">🎤</button>
             </div>
             
             <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center justify-center h-[52px] gap-2">
@@ -101,6 +107,15 @@
     </footer>
 
     <script>
+        // --- NOUVEAU : Configuration de Marked.js pour inclure Highlight.js ---
+        marked.setOptions({
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
+
         const chatHistory = [];
         const chatMemories = {};
 
@@ -115,72 +130,51 @@
         const plusBtn = document.getElementById("plus-btn");
         const micBtn = document.getElementById("mic-btn");
 
-        // --- GESTION DU MICROPHONE (Web Speech API) ---
         let recognition;
         let isListening = false;
 
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.lang = 'fr-FR'; // Langue française
-            recognition.interimResults = true; // Affiche les mots pendant que tu parles
-            recognition.continuous = false; // S'arrête quand tu fais une pause
+            recognition.lang = 'fr-FR';
+            recognition.interimResults = true;
+            recognition.continuous = false;
 
             recognition.onstart = function() {
                 isListening = true;
                 micBtn.classList.add('mic-listening');
-                showToast("Écoute en cours... Parle maintenant", "info");
+                showToast("Écoute en cours...", "info");
                 inputField.placeholder = "Je t'écoute...";
             };
 
             recognition.onresult = function(event) {
                 let transcript = '';
-                for (let i = 0; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
-                }
-                inputField.value = transcript; // Écrit en direct dans la barre de chat !
+                for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
+                inputField.value = transcript;
             };
 
             recognition.onerror = function(event) {
                 isListening = false;
                 micBtn.classList.remove('mic-listening');
                 inputField.placeholder = "Pose une question...";
-                if (event.error === 'not-allowed') {
-                    showToast("Accès au microphone refusé par le navigateur", "error");
-                }
+                if (event.error === 'not-allowed') showToast("Microphone bloqué", "error");
             };
 
             recognition.onend = function() {
                 isListening = false;
                 micBtn.classList.remove('mic-listening');
                 inputField.placeholder = "Pose une question...";
-                if (inputField.value.trim() !== '') {
-                    showToast("Prise de note terminée !");
-                }
             };
-        } else {
-            micBtn.style.display = 'none'; // Cache le micro si le navigateur ne le supporte pas
-        }
+        } else { micBtn.style.display = 'none'; }
 
         function toggleDictation() {
-            if (!recognition) return showToast("Microphone non supporté par ce navigateur", "error");
-            
-            if (isListening) {
-                recognition.stop();
-            } else {
-                inputField.value = ''; // On vide le champ avant de commencer à dicter
-                recognition.start();
-            }
+            if (!recognition) return showToast("Micro non supporté", "error");
+            if (isListening) recognition.stop();
+            else { inputField.value = ''; recognition.start(); }
         }
 
-        // Message de bienvenue au chargement de la page
-        window.onload = () => {
-            setTimeout(() => {
-                showToast("✨ MyRAG est prêt !");
-            }, 500);
-        };
+        window.onload = () => { setTimeout(() => { showToast("✨ MyRAG est prêt !"); }, 500); };
 
-        // --- GESTION DES MENUS & THEMES ---
         function toggleSourceMenu() { sourceMenu.classList.toggle("hidden"); }
         document.addEventListener('click', function(event) {
             if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target) && !sourceMenu.classList.contains('hidden')) {
@@ -190,26 +184,21 @@
         
         function toggleTheme() {
             if (htmlElement.classList.contains('dark')) {
-                htmlElement.classList.remove('dark');
-                themeToggle.innerHTML = "🌙";
+                htmlElement.classList.remove('dark'); themeToggle.innerHTML = "🌙";
             } else {
-                htmlElement.classList.add('dark');
-                themeToggle.innerHTML = "☀️";
+                htmlElement.classList.add('dark'); themeToggle.innerHTML = "☀️";
             }
         }
         function handleKeyPress(e) { if (e.key === "Enter") askQuestion(); }
 
-        // --- TOASTS ---
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-sm font-medium bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100`;
-            
             let icon = type === 'error' ? "❌" : (type === 'info' ? "💬" : "✅");
             if (type === 'error') toast.classList.add('border-red-200', 'bg-red-50', 'text-red-800', 'dark:bg-red-900/30');
             else if (type === 'info') toast.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-800', 'dark:bg-blue-900/30');
             else toast.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-800', 'dark:bg-emerald-900/30');
-            
             toast.innerHTML = `<span>${icon}</span><span class="flex-1">${message}</span>`;
             container.appendChild(toast);
             setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
@@ -219,13 +208,7 @@
         function clearChat() {
             chatHistory.length = 0; 
             for (let key in chatMemories) delete chatMemories[key];
-            
-            chatBox.innerHTML = `
-            <div class="flex flex-col max-w-3xl self-start w-full">
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">
-                    Bonjour Arthur ! La conversation a été réinitialisée. Prêt pour de nouvelles questions ! 🚀
-                </div>
-            </div>`;
+            chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
             sourceMenu.classList.add("hidden");
             showToast("Historique effacé avec succès !");
         }
@@ -234,38 +217,25 @@
             const rawText = chatMemories[messageId];
             if (!rawText) return;
             try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(rawText);
-                } else {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = rawText;
-                    textArea.style.position = "fixed"; 
-                    textArea.style.left = "-9999px"; 
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
+                if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(rawText);
+                else {
+                    const textArea = document.createElement("textarea"); textArea.value = rawText; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; document.body.appendChild(textArea);
+                    textArea.select(); document.execCommand('copy'); document.body.removeChild(textArea);
                 }
                 const btn = document.getElementById(buttonId);
                 if (btn) {
                     if (!btn.dataset.original) btn.dataset.original = btn.innerHTML;
-                    btn.innerHTML = '✅ Copié !';
-                    btn.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/50', 'dark:text-emerald-400');
-                    setTimeout(() => {
-                        btn.innerHTML = btn.dataset.original;
-                        btn.classList.remove('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/50', 'dark:text-emerald-400');
-                    }, 2000);
+                    btn.innerHTML = '✅ Copié !'; btn.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/50', 'dark:text-emerald-400');
+                    setTimeout(() => { btn.innerHTML = btn.dataset.original; btn.classList.remove('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/50', 'dark:text-emerald-400'); }, 2000);
                 }
-            } catch (err) {
-                showToast("Erreur lors de la copie", "error");
-            }
+            } catch (err) { showToast("Erreur lors de la copie", "error"); }
         }
 
         async function exportText() {
             if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
             let rawText = "🧠 Historique de conversation MyRAG\\n Date : " + new Date().toLocaleString() + "\\n====================================================\\n\\n";
             chatHistory.forEach(msg => {
-                if (msg.role === 'user') { rawText += "👤 Vous : " + msg.content + "\\n\\n"; } 
+                if (msg.role === 'user') rawText += "👤 Vous : " + msg.content + "\\n\\n"; 
                 else {
                     rawText += "🤖 MyRAG :\\n" + msg.content + "\\n\\n";
                     if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) rawText += "📂 Sources :\\n- " + msg.meta.sources.join("\\n- ") + "\\n";
@@ -275,29 +245,21 @@
             try {
                 if (window.showSaveFilePicker) {
                     const handle = await window.showSaveFilePicker({ suggestedName: `MyRAG_Historique_${Date.now()}.txt`, types: [{ description: 'Fichier Texte', accept: {'text/plain': ['.txt']} }] });
-                    const writable = await handle.createWritable();
-                    await writable.write(rawText);
-                    await writable.close();
-                    showToast("Historique TXT sauvegardé !");
+                    const writable = await handle.createWritable(); await writable.write(rawText); await writable.close(); showToast("Historique TXT sauvegardé !");
                 } else {
-                    const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url; a.download = `MyRAG_Historique_${Date.now()}.txt`; a.click();
-                    URL.revokeObjectURL(url);
-                    showToast("Historique TXT téléchargé !");
+                    const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a"); a.href = url; a.download = `MyRAG_Historique_${Date.now()}.txt`; a.click(); URL.revokeObjectURL(url); showToast("Historique TXT téléchargé !");
                 }
             } catch (error) { if (error.name !== 'AbortError') showToast("Erreur de sauvegarde", "error"); }
         }
 
         function exportPdf() {
             if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
-            showToast("Génération du PDF en cours...", "info");
+            showToast("Génération du PDF...", "info");
             let contentHtml = "";
             chatHistory.forEach(msg => {
-                if (msg.role === 'user') {
-                    contentHtml += `<div style="background-color: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;"><strong style="color: #0284c7;">👤 Vous :</strong><br><span style="font-size: 15px;">${msg.content}</span></div>`;
-                } else {
+                if (msg.role === 'user') contentHtml += `<div style="background-color: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;"><strong style="color: #0284c7;">👤 Vous :</strong><br><span style="font-size: 15px;">${msg.content}</span></div>`;
+                else {
                     let metaHtml = "";
                     if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) metaHtml = `<div style="font-size: 11px; color: #6b7280; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e5e7eb;"><strong>📂 Sources :</strong><br>&bull; ${msg.meta.sources.join('<br>&bull; ')}</div>`;
                     contentHtml += `<div style="padding: 15px; margin-bottom: 30px;"><strong>🤖 MyRAG :</strong><br><div style="line-height: 1.6; font-size: 15px; color: #374151; margin-top: 5px;">${marked.parse(msg.content)}</div>${metaHtml}</div>`;
@@ -305,22 +267,37 @@
             });
             const pdfContainer = document.createElement('div');
             pdfContainer.innerHTML = `<div style="padding: 20px; font-family: sans-serif;"><div style="border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; font-size: 14px; color: #666;"><span style="font-weight: bold; color: #0ea5e9;">🧠 Historique MyRAG Local</span><span>Date : ${new Date().toLocaleString()}</span></div>${contentHtml}</div>`;
-            html2pdf().set({ margin: 15, filename: `MyRAG_Historique_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(pdfContainer).save().then(() => { showToast("Historique PDF téléchargé !"); }).catch(() => { showToast("Erreur de génération PDF", "error"); });
+            html2pdf().set({ margin: 15, filename: `MyRAG_Historique_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(pdfContainer).save().then(() => showToast("Historique PDF téléchargé !")).catch(() => showToast("Erreur PDF", "error"));
         }
 
         async function handleSourceChange() {
-            if (sourceSelect.value === "custom") {
+            if (sourceSelect.value.startsWith("custom")) {
                 try {
-                    const res = await fetch("/pick_folder");
+                    const endpoint = sourceSelect.value === "custom_folder" ? "/pick_folder" : "/pick_file";
+                    showToast("Ouverture du Finder macOS...", "info");
+                    
+                    const res = await fetch(endpoint);
                     const data = await res.json();
-                    if (data.path) { customPathInput.value = data.path; customPathInput.classList.remove("hidden"); } 
-                    else { customPathInput.value = ""; customPathInput.classList.remove("hidden"); customPathInput.focus(); }
-                } catch (error) { customPathInput.value = ""; customPathInput.classList.remove("hidden"); }
+                    
+                    if (data.path) { 
+                        customPathInput.value = data.path; 
+                        customPathInput.classList.remove("hidden");
+                        showToast("Emplacement prêt !");
+                    } else { 
+                        customPathInput.value = ""; 
+                        customPathInput.classList.remove("hidden"); 
+                        customPathInput.focus();
+                        showToast("Saisie manuelle possible", "info");
+                    }
+                } catch (error) { 
+                    customPathInput.value = ""; 
+                    customPathInput.classList.remove("hidden"); 
+                }
             } else { customPathInput.classList.add("hidden"); }
         }
 
         async function changeSource() {
-            let targetPath = sourceSelect.value === "custom" ? customPathInput.value : "./data";
+            let targetPath = sourceSelect.value.startsWith("custom") ? customPathInput.value : "./data";
             reloadBtn.innerHTML = `<span>⏳</span>...`; reloadBtn.disabled = true; sourceMenu.classList.add("hidden"); 
             const sysId = "sys-" + Date.now();
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}"><div class="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm animate-pulse">⚙️ Reconstruction depuis : ${targetPath}...</div></div>`;
@@ -336,63 +313,37 @@
 
         async function askQuestion() {
             const question = inputField.value.trim();
-            
-            // NOUVEAU TOAST : Si le champ est vide
-            if (!question) {
-                showToast("Veuillez entrer une question 🙃", "info");
-                return;
-            }
-
+            if (!question) { showToast("Veuillez entrer une question 🙃", "info"); return; }
             chatHistory.push({ role: "user", content: question });
-
-            chatBox.innerHTML += `
-            <div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end">
-                <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">${question}</div>
-            </div>`;
-            inputField.value = "";
-            chatBox.scrollTop = chatBox.scrollHeight;
+            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">${question}</div></div>`;
+            inputField.value = ""; chatBox.scrollTop = chatBox.scrollHeight;
 
             const loadingId = "load-" + Date.now();
-            chatBox.innerHTML += `
-            <div class="flex flex-col max-w-3xl self-start w-full" id="${loadingId}">
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">
-                    🔍 MyRAG réfléchit...
-                </div>
-            </div>`;
+            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full" id="${loadingId}"><div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div></div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
                 const response = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: question }) });
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let accumulatedAnswer = "";
-                let buffer = "";
-                let isFirstToken = true;
+                const reader = response.body.getReader(); const decoder = new TextDecoder();
+                let accumulatedAnswer = ""; let buffer = ""; let isFirstToken = true;
                 const bubbleContainer = document.getElementById(loadingId);
 
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    
                     buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n");
-                    buffer = lines.pop(); 
+                    const lines = buffer.split("\n"); buffer = lines.pop(); 
                     
                     for (const line of lines) {
                         if (line.trim().startsWith("data: ")) {
                             try {
                                 const data = JSON.parse(line.slice(6));
-                                
                                 if (data.token) {
-                                    if (isFirstToken) {
-                                        bubbleContainer.innerHTML = `<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full"><div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div><div id="meta-${loadingId}"></div></div>`;
-                                        isFirstToken = false;
-                                    }
+                                    if (isFirstToken) { bubbleContainer.innerHTML = `<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full"><div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div><div id="meta-${loadingId}"></div></div>`; isFirstToken = false; }
                                     accumulatedAnswer += data.token;
                                     document.getElementById(`text-${loadingId}`).innerHTML = marked.parse(accumulatedAnswer);
                                     chatBox.scrollTop = chatBox.scrollHeight;
                                 }
-                                
                                 if (data.metadata && !isFirstToken) {
                                     const metaContainer = document.getElementById(`meta-${loadingId}`);
                                     chatMemories[loadingId] = accumulatedAnswer;
@@ -403,7 +354,6 @@
                                         const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
                                         sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul><div class="mt-2 text-gray-400 text-[10px] font-mono bg-gray-50 dark:bg-gray-700/50 p-1.5 rounded inline-block">⏱️ ${data.metadata.time}s | 📍 ${data.metadata.current_path}</div></div>`;
                                     }
-                                    
                                     const copyBtnId = `copy-${loadingId}`;
                                     metaContainer.innerHTML = sourcesHtml + `
                                         <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">

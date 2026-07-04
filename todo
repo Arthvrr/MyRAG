@@ -4,6 +4,7 @@
 - ajouter possibilité de soumettre un path, et l'IA ira créer sa base vectorielle à partir de ça (créer commandes spécifiques)
 - calibration/score de confiance
 - reranking
+- créer icone site web
 
 - Mémoire de Conversation : Pour l'instant, ton IA est amnésique à chaque question. Intégrer un module comme ConversationBufferMemory dans LangChain permettrait de faire des suivis. (Exemple : "Quel est le totem de Gaspard ?" puis "Et quelle est son adresse email ?").
 - Calibration et Score de Confiance : Pour limiter les hallucinations, tu pourrais implémenter une logique de calibration sur tes modèles. L'idée serait d'évaluer la certitude de la réponse générée face aux documents extraits, et d'afficher un petit badge de "confiance" (ex: 🟢 Haute, 🔴 Faible) à côté de chaque message.

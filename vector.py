@@ -4,10 +4,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 
-
 PATH_FILE = ".current_path.txt"
 
-# Si le post-it existe, on lit le chemin dedans. Sinon, par défaut c'est "./data"
 if os.path.exists(PATH_FILE):
     with open(PATH_FILE, "r") as f:
         USER_DOCS_PATH = f.read().strip()
@@ -15,39 +13,50 @@ else:
     USER_DOCS_PATH = "./data"
 
 VECTOR_STORE_DIR = "./chroma_db"
-
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
 
 if not os.path.exists(VECTOR_STORE_DIR):
     print("Création de la base vectorielle en cours...")
-    
-    # CHANGEMENT ICI : On utilise PyMuPDFLoader pour les .pdf
-    loaders = {".pdf": PyMuPDFLoader, ".txt": TextLoader}
     documents = []
-    for ext, loader_cls in loaders.items():
-        if loader_cls == TextLoader:
-             loader = DirectoryLoader(USER_DOCS_PATH, glob=f"**/*{ext}", loader_cls=loader_cls, loader_kwargs={'encoding': 'utf-8'})
+    
+    # --- NOUVEAU : GESTION D'UN FICHIER UNIQUE ---
+    if os.path.isfile(USER_DOCS_PATH):
+        print(f"📄 Traitement d'un fichier unique : {USER_DOCS_PATH}")
+        ext = os.path.splitext(USER_DOCS_PATH)[1].lower()
+        if ext == '.pdf':
+            loader = PyMuPDFLoader(USER_DOCS_PATH)
+            documents.extend(loader.load())
+        elif ext in ['.txt', '.csv', '.md']:
+            loader = TextLoader(USER_DOCS_PATH, encoding='utf-8')
+            documents.extend(loader.load())
         else:
-            loader = DirectoryLoader(USER_DOCS_PATH, glob=f"**/*{ext}", loader_cls=loader_cls)
-        documents.extend(loader.load())
+            print(f"❌ Format non supporté : {ext}")
+
+    # --- ANCIEN CODE : GESTION D'UN DOSSIER COMPLET ---
+    elif os.path.isdir(USER_DOCS_PATH):
+        print(f"📁 Traitement d'un dossier : {USER_DOCS_PATH}")
+        loaders = {".pdf": PyMuPDFLoader, ".txt": TextLoader}
+        for ext, loader_cls in loaders.items():
+            if loader_cls == TextLoader:
+                 loader = DirectoryLoader(USER_DOCS_PATH, glob=f"**/*{ext}", loader_cls=loader_cls, loader_kwargs={'encoding': 'utf-8'})
+            else:
+                loader = DirectoryLoader(USER_DOCS_PATH, glob=f"**/*{ext}", loader_cls=loader_cls)
+            documents.extend(loader.load())
     
     # Découper le texte
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     all_splits = text_splitter.split_documents(documents)
     
     if not all_splits:
-        print(f"❌ Aucun texte n'a pu être extrait du dossier : {USER_DOCS_PATH}")
-        print("👉 Vérifie que le dossier contient bien des PDF/TXT et que le Terminal a le droit de le lire.")
+        print(f"❌ Aucun texte n'a pu être extrait de : {USER_DOCS_PATH}")
     else:
-        # Sauvegarder dans Chroma (seulement si on a du contenu)
         vector_store = Chroma.from_documents(
             documents=all_splits, 
             embedding=embeddings, 
             persist_directory=VECTOR_STORE_DIR
         )
         print(f"\nBase vectorielle créée avec succès ! ({len(all_splits)} morceaux générés)")
-        print("📂 Fichiers ingérés dans la base :")
-        
+        print("📂 Sources ingérées dans la base :")
         sources_uniques = set([doc.metadata.get('source', 'Source inconnue') for doc in all_splits])
         for source in sorted(sources_uniques):
             print(f"  ✅ {source}")
@@ -58,5 +67,4 @@ else:
         embedding_function=embeddings
     )
 
-# 3. Créer le retriever (l'outil de recherche) qu'on va exporter
 retriever = vector_store.as_retriever(search_kwargs={"k": 10})
