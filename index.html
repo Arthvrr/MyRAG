@@ -5,32 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyRAG - Local AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class', // Activation du mode sombre manuel
-            theme: {
-                extend: {
-                    colors: { brand: '#0ea5e9', brandDark: '#0284c7' }
-                }
-            }
+            darkMode: 'class', 
+            theme: { extend: { colors: { brand: '#0ea5e9', brandDark: '#0284c7' } } }
         }
     </script>
+    <style>
+        .prose pre { background-color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-family: monospace; margin: 0.5rem 0; }
+        .dark .prose pre { background-color: #1f2937; }
+        .prose code { background-color: #f3f4f6; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; }
+        .dark .prose code { background-color: #1f2937; }
+        .prose ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.5rem; }
+        .prose ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.5rem; }
+        .prose p { margin-bottom: 0.5rem; }
+        .prose h3 { font-weight: bold; margin-top: 0.75rem; color: #0ea5e9; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col font-sans transition-colors duration-300">
     
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
     <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 z-10 transition-colors duration-300">
         <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
             <span>🧠</span> MyRAG <span class="text-brand font-light">Local</span>
         </h1>
-        
         <div class="flex items-center gap-4">
-            <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xl">
-                🌙
-            </button>
+            <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xl">🌙</button>
         </div>
     </header>
 
-    <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 max-w-4xl w-full mx-auto">
+    <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 max-w-4xl w-full mx-auto pb-24">
         <div class="flex flex-col max-w-3xl self-start w-full">
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">
                 Bonjour Arthur ! Je suis branché sur ton Mac. Choisis un dossier (bouton +) ou pose-moi une question ! 🚀
@@ -50,7 +56,7 @@
                         <option value="custom" class="dark:bg-gray-800">🔍 Parcourir le Mac...</option>
                     </select>
                     
-                    <input type="text" id="custom-path-input" readonly placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
+                    <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
                     
                     <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1">
                         <span>🔄</span> Recharger
@@ -71,6 +77,9 @@
     </footer>
 
     <script>
+        // --- MÉMOIRE GLOBALE POUR SÉCURISER LES EXPORTS ---
+        const chatMemories = {};
+
         const chatBox = document.getElementById("chat");
         const inputField = document.getElementById("question");
         const sourceSelect = document.getElementById("source-select");
@@ -78,24 +87,16 @@
         const reloadBtn = document.getElementById("reload-btn");
         const themeToggle = document.getElementById("theme-toggle");
         const htmlElement = document.documentElement;
-        
-        // Nouveaux éléments pour le menu
         const sourceMenu = document.getElementById("source-menu");
         const plusBtn = document.getElementById("plus-btn");
 
-        // --- GESTION DU MENU "+" ---
-        function toggleSourceMenu() {
-            sourceMenu.classList.toggle("hidden");
-        }
-
-        // Fermer le menu si on clique n'importe où ailleurs sur la page
+        // --- GESTION DES MENUS & THEMES ---
+        function toggleSourceMenu() { sourceMenu.classList.toggle("hidden"); }
         document.addEventListener('click', function(event) {
             if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target) && !sourceMenu.classList.contains('hidden')) {
                 sourceMenu.classList.add("hidden");
             }
         });
-
-        // --- GESTION DU MODE SOMBRE ---
         function toggleTheme() {
             if (htmlElement.classList.contains('dark')) {
                 htmlElement.classList.remove('dark');
@@ -105,53 +106,115 @@
                 themeToggle.innerHTML = "☀️";
             }
         }
+        function handleKeyPress(e) { if (e.key === "Enter") askQuestion(); }
 
-        // --- SÉLECTION DE DOSSIER NATIF MAC ---
+        // --- TOASTS & EXPORTS SÉCURISÉS ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-sm font-medium bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100`;
+            
+            let icon = type === 'error' ? "❌" : (type === 'info' ? "⏳" : "✅");
+            if (type === 'error') toast.classList.add('border-red-200', 'bg-red-50', 'text-red-800', 'dark:bg-red-900/30');
+            else if (type === 'info') toast.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-800', 'dark:bg-blue-900/30');
+            else toast.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-800', 'dark:bg-emerald-900/30');
+            
+            toast.innerHTML = `<span>${icon}</span><span class="flex-1">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => { toast.classList.add('opacity-0', 'scale-95'); setTimeout(() => toast.remove(), 300); }, 4000);
+        }
+
+        async function exportText(messageId) {
+            const rawText = chatMemories[messageId];
+            if (!rawText) return;
+
+            try {
+                // Utilisation de l'API moderne File System Access pour ouvrir le vrai Finder Mac
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: `MyRAG_${Date.now()}.txt`,
+                        types: [{ description: 'Fichier Texte', accept: {'text/plain': ['.txt']} }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(rawText);
+                    await writable.close();
+                    showToast("Fichier TXT sauvegardé !");
+                } else {
+                    // Fallback classique si Safari est ancien
+                    const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = `MyRAG_${Date.now()}.txt`; a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Document TXT téléchargé !");
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    showToast("Erreur lors de la sauvegarde", "error");
+                }
+            }
+        }
+
+        function exportPdf(messageId) {
+            const rawText = chatMemories[messageId];
+            if (!rawText) return;
+
+            const printWindow = window.open('', '_blank');
+            const formattedContent = marked.parse(rawText);
+            const htmlContent = 
+                '<html><head><title>Export MyRAG</title><script src="https://cdn.tailwindcss.com"><\/script><\/head>' +
+                '<body class="p-10 bg-white text-gray-900"><div class="max-w-3xl mx-auto">' +
+                '<div class="border-b pb-4 mb-6 flex justify-between items-center text-sm text-gray-400">' +
+                '<span>🧠 Assistant Local MyRAG<\/span><span>Date: ' + new Date().toLocaleDateString() + '<\/span><\/div>' +
+                '<div class="prose max-w-none leading-relaxed">' + formattedContent + '<\/div><\/div>' +
+                '<script>window.onload = function() { window.print(); window.close(); }<\/script><\/body><\/html>';
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            showToast("Fenêtre d'impression ouverte !", "info");
+        }
+
+        // --- GESTION SOURCE ---
         async function handleSourceChange() {
             if (sourceSelect.value === "custom") {
-                const res = await fetch("/pick_folder");
-                const data = await res.json();
-                
-                if (data.path) {
-                    customPathInput.value = data.path;
+                try {
+                    const res = await fetch("/pick_folder");
+                    const data = await res.json();
+                    if (data.path) {
+                        customPathInput.value = data.path;
+                        customPathInput.classList.remove("hidden");
+                    } else {
+                        customPathInput.value = "";
+                        customPathInput.classList.remove("hidden");
+                        customPathInput.focus();
+                    }
+                } catch (error) {
+                    customPathInput.value = "";
                     customPathInput.classList.remove("hidden");
-                } else {
-                    sourceSelect.value = "./data";
-                    customPathInput.classList.add("hidden");
                 }
             } else {
                 customPathInput.classList.add("hidden");
             }
         }
 
-        function handleKeyPress(e) {
-            if (e.key === "Enter") askQuestion();
-        }
-
-        // --- APPEL API : CHANGEMENT DE SOURCE ---
         async function changeSource() {
             let targetPath = sourceSelect.value === "custom" ? customPathInput.value : "./data";
-
             reloadBtn.innerHTML = `<span>⏳</span>...`;
             reloadBtn.disabled = true;
-            sourceMenu.classList.add("hidden"); // Ferme le menu pendant le chargement
+            sourceMenu.classList.add("hidden"); 
             
             const sysId = "sys-" + Date.now();
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}">
                 <div class="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm animate-pulse">
                     ⚙️ Reconstruction depuis : ${targetPath}...
-                </div>
-            </div>`;
+                </div></div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
                 const response = await fetch("/change_source", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ path: targetPath })
+                    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: targetPath })
                 });
                 const data = await response.json();
-
                 if(data.status === "success") {
                     document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">✅ ${data.message}</div>`;
                 } else {
@@ -160,22 +223,19 @@
             } catch (error) {
                 document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">❌ Erreur réseau.</div>`;
             }
-
             reloadBtn.innerHTML = `<span>🔄</span> Recharger`;
             reloadBtn.disabled = false;
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- APPEL API : DISCUSSION ---
+        // --- CHAT EN STREAMING ---
         async function askQuestion() {
             const question = inputField.value.trim();
             if (!question) return;
 
             chatBox.innerHTML += `
             <div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end">
-                <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">
-                    ${question}
-                </div>
+                <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">${question}</div>
             </div>`;
             inputField.value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -191,38 +251,78 @@
 
             try {
                 const response = await fetch("/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ question: question })
+                    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: question })
                 });
-                const data = await response.json();
 
-                let sourcesHtml = "";
-                if (data.sources && data.sources.length > 0) {
-                    const sourcesList = data.sources.map(s => `<li class="truncate text-gray-500 dark:text-gray-400 py-0.5">• ${s}</li>`).join('');
-                    sourcesHtml = `
-                    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-sm">
-                        <strong class="text-gray-700 dark:text-gray-300 font-semibold flex items-center gap-1">📂 Sources utilisées :</strong>
-                        <ul class="mt-2 space-y-1">${sourcesList}</ul>
-                        <div class="mt-3 text-gray-400 dark:text-gray-500 text-xs font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded inline-block">⏱️ ${data.time} s | 📍 ${data.current_path}</div>
-                    </div>`;
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let accumulatedAnswer = "";
+                let buffer = "";
+                let isFirstToken = true;
+                const bubbleContainer = document.getElementById(loadingId);
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop(); 
+                    
+                    for (const line of lines) {
+                        if (line.trim().startsWith("data: ")) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                
+                                if (data.token) {
+                                    if (isFirstToken) {
+                                        bubbleContainer.innerHTML = `
+                                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
+                                                <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div>
+                                                <div id="meta-${loadingId}"></div>
+                                            </div>`;
+                                        isFirstToken = false;
+                                    }
+                                    accumulatedAnswer += data.token;
+                                    document.getElementById(`text-${loadingId}`).innerHTML = marked.parse(accumulatedAnswer);
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+                                }
+                                
+                                if (data.metadata && !isFirstToken) {
+                                    const metaContainer = document.getElementById(`meta-${loadingId}`);
+                                    
+                                    // 1. Sauvegarde propre dans la mémoire pour les exports (évite le plantage des apostrophes)
+                                    chatMemories[loadingId] = accumulatedAnswer;
+
+                                    let sourcesHtml = "";
+                                    if (data.metadata.sources && data.metadata.sources.length > 0) {
+                                        const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
+                                        sourcesHtml = `
+                                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm">
+                                            <strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong>
+                                            <ul class="mt-1 space-y-0.5">${sourcesList}</ul>
+                                            <div class="mt-2 text-gray-400 text-[10px] font-mono bg-gray-50 dark:bg-gray-700/50 p-1.5 rounded inline-block">⏱️ ${data.metadata.time}s | 📍 ${data.metadata.current_path}</div>
+                                        </div>`;
+                                    }
+                                    
+                                    metaContainer.innerHTML = sourcesHtml + `
+                                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex gap-2 justify-end">
+                                            <button onclick="exportText('${loadingId}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                                                💾 Exporter en .txt
+                                            </button>
+                                            <button onclick="exportPdf('${loadingId}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                                                📄 Sauvegarder en PDF
+                                            </button>
+                                        </div>`;
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+                                }
+                            } catch(e) {}
+                        }
+                    }
                 }
-                
-                const formattedAnswer = data.answer.replace(/\n/g, '<br>');
-                
-                document.getElementById(loadingId).innerHTML = `
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">
-                    ${formattedAnswer}
-                    ${sourcesHtml}
-                </div>`;
-                
             } catch (error) {
-                document.getElementById(loadingId).innerHTML = `
-                <div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-red-600 dark:text-red-400 font-medium">
-                    ❌ Erreur : Impossible de joindre le serveur.
-                </div>`;
+                document.getElementById(loadingId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-red-600 dark:text-red-400 font-medium">❌ Erreur réseau.</div>`;
             }
-            chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
 </body>

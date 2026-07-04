@@ -1,11 +1,12 @@
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import time
 import subprocess
 import os
 import gc
-import chromadb # NOUVEAU : Pour interagir directement avec le cache du moteur de base de données
+import json
+import chromadb
 
 # Import initial
 from langchain_ollama.llms import OllamaLLM
@@ -14,7 +15,7 @@ from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 from vector import retriever as initial_retriever, USER_DOCS_PATH as initial_path, VECTOR_STORE_DIR
 
-app = FastAPI(title="MyRAG API")
+app = FastAPI(title="MyRAG Streaming API")
 
 model = OllamaLLM(model="llama3") 
 
@@ -67,41 +68,53 @@ def pick_folder():
     except subprocess.CalledProcessError:
         return {"path": ""}
 
+# --- FLUX EN STREAMING VIA SERVER-SENT EVENTS (SSE) ---
 @app.post("/chat")
 def chat(request: ChatRequest):
     global current_retriever, current_path
-    start_time = time.time()
-    
-    relevant_docs = current_retriever.invoke(request.question)
-    context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
-    
-    result = chain.invoke({"context": context_text, "question": request.question})
-    sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
-    elapsed_time = round(time.time() - start_time, 2)
-    
-    return {
-        "answer": result,
-        "sources": sources_uniques,
-        "time": elapsed_time,
-        "current_path": current_path
-    }
+
+    def event_generator():
+        try:
+            start_time = time.time()
+            
+            # 1. Recherche du contexte
+            relevant_docs = current_retriever.invoke(request.question)
+            context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
+            sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
+            
+            # 2. Transmission de la réponse jeton par jeton (Streaming)
+            for chunk in chain.stream({"context": context_text, "question": request.question}):
+                yield f"data: {json.dumps({'token': chunk})}\n\n"
+            
+            elapsed_time = round(time.time() - start_time, 2)
+            
+            # 3. Envoi final des métadonnées (sources, temps, etc.)
+            meta_payload = {
+                'metadata': {
+                    'sources': sources_uniques,
+                    'time': elapsed_time,
+                    'current_path': current_path
+                }
+            }
+            yield f"data: {json.dumps(meta_payload)}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/change_source")
 def change_source(request: SourceRequest):
     global current_retriever, current_path
     
     try:
-        # --- FIX : LE TUEUR DE GHOST FILE ---
-        # 1. On détruit la référence au retriever actuel
+        # Le Tueur de Ghost File
         current_retriever = None
-        gc.collect() # Force le nettoyage de la mémoire vive
-        
-        # 2. On ordonne à ChromaDB de fermer ses fichiers SQLite fantômes
+        gc.collect() 
         try:
             chromadb.api.client.SharedSystemClient.clear_system_cache()
         except Exception:
             pass
-        # ------------------------------------
 
         if request.path == "./data":
             subprocess.run(["./reload_vector.sh"], check=True, capture_output=True, text=True)
