@@ -4,6 +4,8 @@ from pydantic import BaseModel
 import time
 import subprocess
 import os
+import gc
+import chromadb # NOUVEAU : Pour interagir directement avec le cache du moteur de base de données
 
 # Import initial
 from langchain_ollama.llms import OllamaLLM
@@ -47,18 +49,23 @@ def read_root():
     with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# --- NOUVELLE ROUTE POUR LE SÉLECTEUR DE DOSSIER MAC ---
 @app.get("/pick_folder")
 def pick_folder():
     try:
-        # On utilise AppleScript pour ouvrir la vraie fenêtre du Finder macOS !
-        script = 'return POSIX path of (choose folder with prompt "Sélectionne le dossier source pour MyRAG :")'
+        # On utilise AppleScript pour ouvrir la vraie fenêtre du Finder macOS au premier plan
+        script = """
+        tell application (path to frontmost application as text)
+            set folderPath to choose folder with prompt "Sélectionne le dossier source pour MyRAG :"
+            return POSIX path of folderPath
+        end tell
+        """
         result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
-        return {"path": result.stdout.strip()}
-    except subprocess.CalledProcessError:
-        # L'utilisateur a cliqué sur "Annuler"
+        path = result.stdout.strip()
+        if path:
+            return {"path": path}
         return {"path": ""}
-# -------------------------------------------------------
+    except subprocess.CalledProcessError:
+        return {"path": ""}
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -84,6 +91,18 @@ def change_source(request: SourceRequest):
     global current_retriever, current_path
     
     try:
+        # --- FIX : LE TUEUR DE GHOST FILE ---
+        # 1. On détruit la référence au retriever actuel
+        current_retriever = None
+        gc.collect() # Force le nettoyage de la mémoire vive
+        
+        # 2. On ordonne à ChromaDB de fermer ses fichiers SQLite fantômes
+        try:
+            chromadb.api.client.SharedSystemClient.clear_system_cache()
+        except Exception:
+            pass
+        # ------------------------------------
+
         if request.path == "./data":
             subprocess.run(["./reload_vector.sh"], check=True, capture_output=True, text=True)
         else:

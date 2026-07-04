@@ -8,9 +8,6 @@
 3. ajouter mémoire à l'IA
 4. ajouter possibilité de soumettre un path, et l'IA ira créer sa base vectorielle à partir de ça 
 
-
-- faire interface graphique sur localhost sur le web
-
 🧠 Améliorations du Moteur (Backend & RAG)
 L'Effet "Machine à Écrire" (Streaming) : Actuellement, tu attends quelques secondes et le gros bloc de texte apparaît d'un coup. En utilisant les Server-Sent Events (SSE) avec FastAPI, tu peux faire en sorte que l'IA affiche sa réponse mot par mot en temps réel, exactement comme ChatGPT.
 Mémoire de Conversation : Pour l'instant, ton IA est amnésique à chaque question. Intégrer un module comme ConversationBufferMemory dans LangChain permettrait de faire des suivis. (Exemple : "Quel est le totem de Gaspard ?" puis "Et quelle est son adresse email ?").

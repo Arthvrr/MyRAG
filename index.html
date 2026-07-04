@@ -24,21 +24,6 @@
         </h1>
         
         <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-300">
-                <span class="text-sm text-gray-500 dark:text-gray-300 font-medium ml-1">📂 Source :</span>
-                
-                <select id="source-select" class="bg-transparent text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium" onchange="handleSourceChange()">
-                    <option value="./data" class="dark:bg-gray-800">📁 ./data (Par défaut)</option>
-                    <option value="custom" class="dark:bg-gray-800">🔍 Parcourir le Mac...</option>
-                </select>
-                
-                <input type="text" id="custom-path-input" readonly placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-56 shadow-sm">
-                
-                <button onclick="changeSource()" id="reload-btn" class="ml-2 bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-1.5 rounded text-sm font-semibold transition-colors flex items-center gap-1 shadow-sm">
-                    <span>🔄</span> Recharger
-                </button>
-            </div>
-
             <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xl">
                 🌙
             </button>
@@ -48,15 +33,38 @@
     <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 max-w-4xl w-full mx-auto">
         <div class="flex flex-col max-w-3xl self-start w-full">
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">
-                Bonjour Arthur ! Je suis branché sur ton Mac. Choisis un dossier ou pose-moi une question ! 🚀
+                Bonjour Arthur ! Je suis branché sur ton Mac. Choisis un dossier (bouton +) ou pose-moi une question ! 🚀
             </div>
         </div>
     </main>
 
-    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex justify-center transition-colors duration-300">
-        <div class="flex w-full max-w-4xl gap-3">
-            <input type="text" id="question" placeholder="Pose une question..." autocomplete="off" onkeypress="handleKeyPress(event)" class="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
-            <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2">
+    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex justify-center transition-colors duration-300 relative z-20">
+        <div class="flex w-full max-w-4xl gap-3 items-end">
+            
+            <div class="relative flex items-center">
+                <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
+                    
+                    <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
+                        <option value="./data" class="dark:bg-gray-800">📁 ./data (Par défaut)</option>
+                        <option value="custom" class="dark:bg-gray-800">🔍 Parcourir le Mac...</option>
+                    </select>
+                    
+                    <input type="text" id="custom-path-input" readonly placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
+                    
+                    <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1">
+                        <span>🔄</span> Recharger
+                    </button>
+                </div>
+
+                <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm" title="Gérer la source">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+            </div>
+
+            <input type="text" id="question" placeholder="Pose une question..." autocomplete="off" onkeypress="handleKeyPress(event)" class="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
+            
+            <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center justify-center h-[52px] gap-2">
                 Envoyer <span class="text-xl">↗</span>
             </button>
         </div>
@@ -70,6 +78,22 @@
         const reloadBtn = document.getElementById("reload-btn");
         const themeToggle = document.getElementById("theme-toggle");
         const htmlElement = document.documentElement;
+        
+        // Nouveaux éléments pour le menu
+        const sourceMenu = document.getElementById("source-menu");
+        const plusBtn = document.getElementById("plus-btn");
+
+        // --- GESTION DU MENU "+" ---
+        function toggleSourceMenu() {
+            sourceMenu.classList.toggle("hidden");
+        }
+
+        // Fermer le menu si on clique n'importe où ailleurs sur la page
+        document.addEventListener('click', function(event) {
+            if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target) && !sourceMenu.classList.contains('hidden')) {
+                sourceMenu.classList.add("hidden");
+            }
+        });
 
         // --- GESTION DU MODE SOMBRE ---
         function toggleTheme() {
@@ -85,16 +109,13 @@
         // --- SÉLECTION DE DOSSIER NATIF MAC ---
         async function handleSourceChange() {
             if (sourceSelect.value === "custom") {
-                // Fait appel à AppleScript via FastAPI
                 const res = await fetch("/pick_folder");
                 const data = await res.json();
                 
                 if (data.path) {
-                    // Si l'utilisateur a choisi un dossier
                     customPathInput.value = data.path;
                     customPathInput.classList.remove("hidden");
                 } else {
-                    // Si l'utilisateur a annulé, on remet ./data
                     sourceSelect.value = "./data";
                     customPathInput.classList.add("hidden");
                 }
@@ -113,6 +134,7 @@
 
             reloadBtn.innerHTML = `<span>⏳</span>...`;
             reloadBtn.disabled = true;
+            sourceMenu.classList.add("hidden"); // Ferme le menu pendant le chargement
             
             const sysId = "sys-" + Date.now();
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}">
