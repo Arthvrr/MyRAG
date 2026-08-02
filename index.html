@@ -19,17 +19,9 @@
         }
     </script>
     <style>
-        /* Ajustements CSS pour le Markdown et le Code */
         .prose pre { padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9em; }
-        
-        /* Code "en ligne" (un seul mot au milieu d'une phrase) */
-        .prose :not(pre) > code { 
-            background-color: #f3f4f6; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; color: #ef4444; 
-        }
-        .dark .prose :not(pre) > code { 
-            background-color: #1f2937; color: #fca5a5; 
-        }
-        
+        .prose :not(pre) > code { background-color: #f3f4f6; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; color: #ef4444; }
+        .dark .prose :not(pre) > code { background-color: #1f2937; color: #fca5a5; }
         .prose ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose p { margin-bottom: 0.5rem; }
@@ -45,7 +37,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col font-sans transition-colors duration-300">
     
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-20 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 z-10 transition-colors duration-300">
         <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
@@ -96,7 +88,10 @@
             </div>
 
             <div class="relative flex-1">
-                <input type="text" id="question" placeholder="Pose une question..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
+                <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden z-50 transition-all">
+                    </div>
+
+                <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
                 <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1" title="Dicter la question">🎤</button>
             </div>
             
@@ -107,7 +102,6 @@
     </footer>
 
     <script>
-        // --- NOUVEAU : Configuration de Marked.js pour inclure Highlight.js ---
         marked.setOptions({
             highlight: function(code, lang) {
                 const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -129,6 +123,64 @@
         const sourceMenu = document.getElementById("source-menu");
         const plusBtn = document.getElementById("plus-btn");
         const micBtn = document.getElementById("mic-btn");
+        const autocompleteMenu = document.getElementById("autocomplete-menu");
+
+        // --- LISTE DES COMMANDES DISPONIBLES ---
+        const slashCommands = [
+            { cmd: '/clear', desc: 'Vider le chat et effacer la mémoire' },
+            { cmd: '/reload', desc: 'Recharger la base de données actuelle' },
+            { cmd: '/folder', desc: 'Ouvrir le Finder (Choisir un dossier)' },
+            { cmd: '/file', desc: 'Ouvrir le Finder (Choisir un fichier)' },
+            { cmd: '/change', desc: 'Cibler un chemin précis (/change /Users/...)' },
+            { cmd: '/help', desc: 'Afficher la liste des commandes' }
+        ];
+
+        // --- ÉCOUTE DE LA FRAPPE POUR L'AUTOCOMPLÉTION ---
+        inputField.addEventListener('input', function() {
+            const val = this.value;
+            if (val.startsWith('/')) {
+                const search = val.toLowerCase();
+                const filtered = slashCommands.filter(c => c.cmd.startsWith(search));
+                
+                if (filtered.length > 0) {
+                    autocompleteMenu.innerHTML = filtered.map(c => `
+                        <div onclick="selectCommand('${c.cmd}')" class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="font-mono text-brand font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">${c.cmd}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-3 truncate">${c.desc}</span>
+                        </div>
+                    `).join('');
+                    autocompleteMenu.classList.remove('hidden');
+                } else {
+                    autocompleteMenu.classList.add('hidden');
+                }
+            } else {
+                autocompleteMenu.classList.add('hidden');
+            }
+        });
+
+        // --- FONCTION QUAND ON CLIQUE SUR UNE SUGGESTION ---
+        function selectCommand(cmd) {
+            autocompleteMenu.classList.add('hidden');
+            if (cmd === '/change') {
+                // Pour change, on ajoute l'espace et on attend la saisie
+                inputField.value = cmd + ' ';
+                inputField.focus();
+            } else {
+                // Pour les autres, on exécute instantanément !
+                inputField.value = cmd;
+                processSlashCommand(cmd);
+            }
+        }
+
+        // Fermer l'autocomplétion si on clique ailleurs
+        document.addEventListener('click', function(event) {
+            if (!autocompleteMenu.contains(event.target) && event.target !== inputField) {
+                autocompleteMenu.classList.add('hidden');
+            }
+            if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target)) {
+                sourceMenu.classList.add("hidden");
+            }
+        });
 
         let recognition;
         let isListening = false;
@@ -143,7 +195,7 @@
             recognition.onstart = function() {
                 isListening = true;
                 micBtn.classList.add('mic-listening');
-                showToast("Écoute en cours...", "info");
+                showToast("🎤 Écoute en cours...", "info");
                 inputField.placeholder = "Je t'écoute...";
             };
 
@@ -151,19 +203,20 @@
                 let transcript = '';
                 for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
                 inputField.value = transcript;
+                // Déclenche l'événement "input" pour mettre à jour l'autocomplétion si on dicte un slash !
+                inputField.dispatchEvent(new Event('input'));
             };
 
             recognition.onerror = function(event) {
                 isListening = false;
                 micBtn.classList.remove('mic-listening');
-                inputField.placeholder = "Pose une question...";
-                if (event.error === 'not-allowed') showToast("Microphone bloqué", "error");
+                inputField.placeholder = "Pose une question ou tape /...";
             };
 
             recognition.onend = function() {
                 isListening = false;
                 micBtn.classList.remove('mic-listening');
-                inputField.placeholder = "Pose une question...";
+                inputField.placeholder = "Pose une question ou tape /...";
             };
         } else { micBtn.style.display = 'none'; }
 
@@ -176,11 +229,6 @@
         window.onload = () => { setTimeout(() => { showToast("✨ MyRAG est prêt !"); }, 500); };
 
         function toggleSourceMenu() { sourceMenu.classList.toggle("hidden"); }
-        document.addEventListener('click', function(event) {
-            if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target) && !sourceMenu.classList.contains('hidden')) {
-                sourceMenu.classList.add("hidden");
-            }
-        });
         
         function toggleTheme() {
             if (htmlElement.classList.contains('dark')) {
@@ -195,9 +243,10 @@
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-sm font-medium bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100`;
-            let icon = type === 'error' ? "❌" : (type === 'info' ? "💬" : "✅");
+            let icon = type === 'error' ? "❌" : (type === 'info' ? "💬" : (type === 'warning' ? "⚡" : "✅"));
             if (type === 'error') toast.classList.add('border-red-200', 'bg-red-50', 'text-red-800', 'dark:bg-red-900/30');
             else if (type === 'info') toast.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-800', 'dark:bg-blue-900/30');
+            else if (type === 'warning') toast.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-800', 'dark:bg-amber-900/30');
             else toast.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-800', 'dark:bg-emerald-900/30');
             toast.innerHTML = `<span>${icon}</span><span class="flex-1">${message}</span>`;
             container.appendChild(toast);
@@ -210,7 +259,56 @@
             for (let key in chatMemories) delete chatMemories[key];
             chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
             sourceMenu.classList.add("hidden");
-            showToast("Historique effacé avec succès !");
+            showToast("Historique effacé avec succès !", "warning");
+        }
+
+        async function processSlashCommand(commandStr) {
+            const args = commandStr.trim().split(" ");
+            const cmd = args[0].toLowerCase();
+            inputField.value = ""; 
+            autocompleteMenu.classList.add('hidden'); // Ferme l'autocomplétion au cas où
+
+            if (cmd === "/clear") {
+                clearChat();
+            } else if (cmd === "/reload") {
+                showToast("Commande reçue : Rechargement", "info");
+                changeSource();
+            } else if (cmd === "/folder") {
+                showToast("Commande reçue : Choix de dossier", "info");
+                sourceSelect.value = "custom_folder";
+                handleSourceChange();
+            } else if (cmd === "/file") {
+                showToast("Commande reçue : Choix de fichier", "info");
+                sourceSelect.value = "custom_file";
+                handleSourceChange();
+            } else if (cmd === "/change") {
+                if (args.length > 1) {
+                    const target = args.slice(1).join(" ");
+                    showToast(`Changement de cible : ${target}`, "info");
+                    customPathInput.value = target;
+                    customPathInput.classList.remove("hidden");
+                    sourceSelect.value = "custom_folder";
+                    changeSource();
+                } else {
+                    showToast("Erreur : Spécifiez un chemin (/change /Users/...)", "error");
+                }
+            } else if (cmd === "/help") {
+                chatBox.innerHTML += `
+                <div class="flex flex-col max-w-3xl self-start w-full my-2">
+                    <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-5 rounded-2xl rounded-tl-sm shadow-sm text-blue-800 dark:text-blue-300 leading-relaxed text-base">
+                        <strong>🛠️ Commandes rapides disponibles :</strong><br><br>
+                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/clear</code> : Vider le chat<br><br>
+                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/reload</code> : Recharger la base courante<br><br>
+                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/folder</code> : Ouvrir le Finder (Dossier)<br><br>
+                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/file</code> : Ouvrir le Finder (Fichier)<br><br>
+                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis
+                    </div>
+                </div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+                showToast("Menu d'aide affiché", "info");
+            } else {
+                showToast(`Commande non reconnue : ${cmd}`, "error");
+            }
         }
 
         async function copyToClipboard(messageId, buttonId) {
@@ -233,13 +331,13 @@
 
         async function exportText() {
             if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
-            let rawText = "🧠 Historique de conversation MyRAG\\n Date : " + new Date().toLocaleString() + "\\n====================================================\\n\\n";
+            let rawText = "🧠 Historique de conversation MyRAG\n Date : " + new Date().toLocaleString() + "\n====================================================\n\n";
             chatHistory.forEach(msg => {
-                if (msg.role === 'user') rawText += "👤 Vous : " + msg.content + "\\n\\n"; 
+                if (msg.role === 'user') rawText += "👤 Vous : " + msg.content + "\n\n"; 
                 else {
-                    rawText += "🤖 MyRAG :\\n" + msg.content + "\\n\\n";
-                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) rawText += "📂 Sources :\\n- " + msg.meta.sources.join("\\n- ") + "\\n";
-                    rawText += "----------------------------------------------------\\n\\n";
+                    rawText += "🤖 MyRAG :\n" + msg.content + "\n\n";
+                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) rawText += "📂 Sources :\n- " + msg.meta.sources.join("\n- ") + "\n";
+                    rawText += "----------------------------------------------------\n\n";
                 }
             });
             try {
@@ -275,24 +373,11 @@
                 try {
                     const endpoint = sourceSelect.value === "custom_folder" ? "/pick_folder" : "/pick_file";
                     showToast("Ouverture du Finder macOS...", "info");
-                    
                     const res = await fetch(endpoint);
                     const data = await res.json();
-                    
-                    if (data.path) { 
-                        customPathInput.value = data.path; 
-                        customPathInput.classList.remove("hidden");
-                        showToast("Emplacement prêt !");
-                    } else { 
-                        customPathInput.value = ""; 
-                        customPathInput.classList.remove("hidden"); 
-                        customPathInput.focus();
-                        showToast("Saisie manuelle possible", "info");
-                    }
-                } catch (error) { 
-                    customPathInput.value = ""; 
-                    customPathInput.classList.remove("hidden"); 
-                }
+                    if (data.path) { customPathInput.value = data.path; customPathInput.classList.remove("hidden"); showToast("Emplacement prêt !"); } 
+                    else { customPathInput.value = ""; customPathInput.classList.remove("hidden"); customPathInput.focus(); showToast("Saisie manuelle possible", "info"); }
+                } catch (error) { customPathInput.value = ""; customPathInput.classList.remove("hidden"); }
             } else { customPathInput.classList.add("hidden"); }
         }
 
@@ -305,18 +390,26 @@
             try {
                 const response = await fetch("/change_source", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: targetPath }) });
                 const data = await response.json();
-                if(data.status === "success") { document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">✅ ${data.message}</div>`; } 
-                else { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">❌ ${data.message}</div>`; }
+                if(data.status === "success") { document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">✅ ${data.message}</div>`; showToast("Base vectorielle mise à jour");} 
+                else { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">❌ ${data.message}</div>`; showToast("Erreur de compilation", "error");}
             } catch (error) { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">❌ Erreur réseau.</div>`; }
             reloadBtn.innerHTML = `<span>🔄</span> Recharger`; reloadBtn.disabled = false; chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         async function askQuestion() {
             const question = inputField.value.trim();
-            if (!question) { showToast("Veuillez entrer une question 🙃", "info"); return; }
+            if (!question) { showToast("Veuillez entrer une question 🙃", "warning"); return; }
+
+            if (question.startsWith("/")) {
+                processSlashCommand(question);
+                return;
+            }
+
             chatHistory.push({ role: "user", content: question });
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">${question}</div></div>`;
-            inputField.value = ""; chatBox.scrollTop = chatBox.scrollHeight;
+            inputField.value = ""; 
+            autocompleteMenu.classList.add('hidden');
+            chatBox.scrollTop = chatBox.scrollHeight;
 
             const loadingId = "load-" + Date.now();
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full" id="${loadingId}"><div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div></div>`;
@@ -358,8 +451,8 @@
                                     metaContainer.innerHTML = sourcesHtml + `
                                         <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
                                             <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">📋 Copier</button>
-                                            <button onclick="exportText()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">💾 Exporter l'historique (.txt)</button>
-                                            <button onclick="exportPdf()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">📄 Exporter l'historique (.pdf)</button>
+                                            <button onclick="exportText()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">💾 TXT</button>
+                                            <button onclick="exportPdf()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">📄 PDF</button>
                                         </div>`;
                                     chatBox.scrollTop = chatBox.scrollHeight;
                                 }

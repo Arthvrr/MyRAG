@@ -1,13 +1,15 @@
-1. - intégrer plus de toasts
-3. - ajouter mémoire
-- ajouter lecture de csv, xlsx
-4. - ajouter lecture d'images
-5. - calibration/score de confiance
+5. - ajouter mémoire
+1. - ajouter lecture de csv, xlsx
+2. - ajouter lecture d'images
+4. - calibration/score de confiance
 - reranking
 - créer icone site web
-2. - intégrer commandes slash (/clear, /change, /reload,...)
-6. - ajouter pages de discussions
+3. - ajouter pages de discussions
 
 - Mémoire de Conversation : Pour l'instant, ton IA est amnésique à chaque question. Intégrer un module comme ConversationBufferMemory dans LangChain permettrait de faire des suivis. (Exemple : "Quel est le totem de Gaspard ?" puis "Et quelle est son adresse email ?").
 - Calibration et Score de Confiance : Pour limiter les hallucinations, tu pourrais implémenter une logique de calibration sur tes modèles. L'idée serait d'évaluer la certitude de la réponse générée face aux documents extraits, et d'afficher un petit badge de "confiance" (ex: 🟢 Haute, 🔴 Faible) à côté de chaque message.
 - Reranking (Reclassement) : Quand tu as des centaines de documents, extraire les 10 meilleurs morceaux ne suffit pas toujours. Ajouter un modèle de Cross-Encoder léger juste avant de donner le texte au LLM permet de trier les morceaux trouvés par pertinence absolue.
+
+- Évaluation Automatique (RAGAS) : Concernant la calibration et le score de confiance que tu as notés, tu as là un terrain d'expérimentation parfait en vue de ton mémoire de fin d'études chez BNP Paribas Fortis. Intégrer un framework d'évaluation (comme RAGAS) directement dans ton pipeline te permettrait de mesurer factuellement l'incertitude du modèle et d'isoler les hallucinations.
+
+- RAG Multilingue (Cross-Lingual) : Très pratique pour ingérer les documents administratifs ou académiques en italien liés à ton échange Erasmus à Padoue. Le système vectorise la sémantique de la langue étrangère, mais te permet de l'interroger et de recevoir des synthèses parfaitement rédigées en français.
