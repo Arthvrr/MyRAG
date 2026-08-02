@@ -26,80 +26,104 @@
         .prose ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose p { margin-bottom: 0.5rem; }
         .prose h3 { font-weight: bold; margin-top: 0.75rem; color: #0ea5e9; }
-        
-        @keyframes pulse-red {
-            0% { transform: translateY(-50%) scale(1); color: #ef4444; }
-            50% { transform: translateY(-50%) scale(1.1); color: #dc2626; }
-            100% { transform: translateY(-50%) scale(1); color: #ef4444; }
-        }
+        @keyframes pulse-red { 0% { transform: translateY(-50%) scale(1); color: #ef4444; } 50% { transform: translateY(-50%) scale(1.1); color: #dc2626; } 100% { transform: translateY(-50%) scale(1); color: #ef4444; } }
         .mic-listening { animation: pulse-red 1.5s infinite; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        /* Assure que la sidebar ne devient pas trop petite ni trop grande */
+        #sidebar { min-width: 200px; max-width: 600px; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 h-screen flex flex-col font-sans transition-colors duration-300">
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 h-screen font-sans overflow-hidden">
     
-    <div id="toast-container" class="fixed top-20 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 z-10 transition-colors duration-300">
-        <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white">
-            <span>🧠</span> MyRAG <span class="text-brand font-light">Local</span>
-        </h1>
-        <div class="flex items-center gap-4">
-            <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xl">🌙</button>
-        </div>
-    </header>
+    <div class="flex h-full w-full relative">
 
-    <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 max-w-4xl w-full mx-auto pb-24">
-        <div class="flex flex-col max-w-3xl self-start w-full">
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">
-                Bonjour Arthur ! Je suis branché sur ton Mac. Choisis un dossier ou fichier (bouton +) ou pose-moi une question ! 🚀
-            </div>
-        </div>
-    </main>
+        <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden transition-opacity sm:hidden"></div>
 
-    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex justify-center transition-colors duration-300 relative z-20">
-        <div class="flex w-full max-w-4xl gap-3 items-end">
+        <aside id="sidebar" class="absolute sm:relative z-40 w-72 h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 transform -translate-x-full sm:translate-x-0 flex-shrink-0">
             
-            <div class="relative flex items-center">
-                <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
-                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
-                    
-                    <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
-                        <option value="./data" class="dark:bg-gray-800">📁 ./data (Défaut)</option>
-                        <option value="custom_folder" class="dark:bg-gray-800">📁 Parcourir un dossier...</option>
-                        <option value="custom_file" class="dark:bg-gray-800 text-brand font-bold">📄 Parcourir un fichier...</option>
-                    </select>
-                    
-                    <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
-                    
-                    <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1">
-                        <span>🔄</span> Recharger
-                    </button>
+            <div id="sidebar-resizer" class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-brand/50 active:bg-brand transition-colors z-50"></div>
 
-                    <div class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-3">
-                        <button onclick="clearChat()" class="bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 border border-red-200 dark:border-red-800 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full">
-                            <span>🗑️</span> Vider la discussion
-                        </button>
-                    </div>
-                </div>
-
-                <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm" title="Gérer la source">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <div class="p-4 flex gap-2 border-b border-gray-200 dark:border-gray-700 pr-3">
+                <button onclick="startNewChat()" class="flex-1 bg-brand hover:bg-brandDark text-white font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-sm">
+                    <span>➕</span> Nouveau
+                </button>
+                <button onclick="startIncognitoChat()" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium p-2.5 rounded-xl transition-colors shadow-sm text-sm" title="Mode Incognito (Sans sauvegarde)">
+                    👻
                 </button>
             </div>
 
-            <div class="relative flex-1">
-                <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden z-50 transition-all">
+            <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1 pr-4" id="chat-list">
+                </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-center text-gray-500 dark:text-gray-400">
+                MyRAG v1.0 • Arthur Louette
+            </div>
+        </aside>
+
+        <div class="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 w-full min-w-0 transition-colors duration-300">
+            
+            <header class="border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex justify-between items-center gap-4 z-10 transition-colors duration-300">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white truncate">
+                        <span>🧠</span> MyRAG <span class="text-brand font-light hidden sm:inline">Local</span>
+                        <span id="incognito-badge" class="hidden text-xs bg-gray-800 text-white px-2 py-0.5 rounded-md font-mono">👻 Incognito</span>
+                    </h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xl">🌙</button>
+                </div>
+            </header>
+
+            <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 w-full mx-auto max-w-4xl pb-10">
+                <div class="flex flex-col max-w-3xl self-start w-full">
+                    <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">
+                        Bonjour Arthur ! Prêt pour une nouvelle discussion ? 🚀
+                    </div>
+                </div>
+            </main>
+
+            <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 flex justify-center transition-colors duration-300">
+                <div class="flex w-full max-w-4xl gap-3 items-end relative">
+                    
+                    <div class="relative flex items-center">
+                        <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
+                            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
+                            <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
+                                <option value="./data" class="dark:bg-gray-800">📁 ./data (Défaut)</option>
+                                <option value="custom_folder" class="dark:bg-gray-800">📁 Parcourir un dossier...</option>
+                                <option value="custom_file" class="dark:bg-gray-800 text-brand font-bold">📄 Parcourir un fichier...</option>
+                            </select>
+                            <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
+                            <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1"><span>🔄</span> Recharger</button>
+                        </div>
+
+                        <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white bg-gray-50 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm border border-gray-200 dark:border-gray-700" title="Gérer la source">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
                     </div>
 
-                <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
-                <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1" title="Dicter la question">🎤</button>
-            </div>
-            
-            <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center justify-center h-[52px] gap-2">
-                Envoyer <span class="text-xl">↗</span>
-            </button>
+                    <div class="relative flex-1">
+                        <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden z-50"></div>
+                        <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
+                        <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1">🎤</button>
+                    </div>
+                    
+                    <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center justify-center h-[52px] gap-2 flex-shrink-0">
+                        <span class="hidden sm:inline">Envoyer</span> <span class="text-xl">↗</span>
+                    </button>
+                </div>
+            </footer>
         </div>
-    </footer>
+    </div>
 
     <script>
         marked.setOptions({
@@ -110,134 +134,211 @@
             langPrefix: 'hljs language-'
         });
 
+        // --- GESTION DU REDIMENSIONNEMENT DE LA SIDEBAR ---
+        const resizer = document.getElementById('sidebar-resizer');
+        const sidebar = document.getElementById('sidebar');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none'; // Empêche de sélectionner le texte pendant qu'on glisse
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX;
+            if (newWidth < 200) newWidth = 200;
+            if (newWidth > 600) newWidth = 600;
+            sidebar.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            }
+        });
+
         const chatHistory = [];
         const chatMemories = {};
+        let currentSessionId = "chat_" + Date.now();
+        let isIncognito = false;
 
         const chatBox = document.getElementById("chat");
         const inputField = document.getElementById("question");
+        const sourceMenu = document.getElementById("source-menu");
         const sourceSelect = document.getElementById("source-select");
         const customPathInput = document.getElementById("custom-path-input");
         const reloadBtn = document.getElementById("reload-btn");
-        const themeToggle = document.getElementById("theme-toggle");
-        const htmlElement = document.documentElement;
-        const sourceMenu = document.getElementById("source-menu");
         const plusBtn = document.getElementById("plus-btn");
-        const micBtn = document.getElementById("mic-btn");
         const autocompleteMenu = document.getElementById("autocomplete-menu");
+        const micBtn = document.getElementById("mic-btn");
+        const mobileOverlay = document.getElementById("mobile-overlay");
+        const incognitoBadge = document.getElementById("incognito-badge");
 
-        // --- LISTE DES COMMANDES DISPONIBLES ---
-        const slashCommands = [
-            { cmd: '/clear', desc: 'Vider le chat et effacer la mémoire' },
-            { cmd: '/reload', desc: 'Recharger la base de données actuelle' },
-            { cmd: '/folder', desc: 'Ouvrir le Finder (Choisir un dossier)' },
-            { cmd: '/file', desc: 'Ouvrir le Finder (Choisir un fichier)' },
-            { cmd: '/change', desc: 'Cibler un chemin précis (/change /Users/...)' },
-            { cmd: '/help', desc: 'Afficher la liste des commandes' }
-        ];
+        function saveSession() {
+            if (isIncognito || chatHistory.length === 0) return;
+            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
+            let currentChat = allChats.find(c => c.id === currentSessionId);
+            
+            if (!currentChat) {
+                let title = chatHistory.find(m => m.role === 'user')?.content || "Nouvelle discussion";
+                if (title.length > 25) title = title.substring(0, 25) + "...";
+                currentChat = { id: currentSessionId, title: title, date: Date.now() };
+                allChats.push(currentChat);
+            } else {
+                currentChat.date = Date.now();
+            }
+            
+            localStorage.setItem('myrag_chats', JSON.stringify(allChats));
+            localStorage.setItem(currentSessionId, JSON.stringify({ history: chatHistory, memories: chatMemories }));
+            renderSidebar();
+        }
 
-        // --- ÉCOUTE DE LA FRAPPE POUR L'AUTOCOMPLÉTION ---
-        inputField.addEventListener('input', function() {
-            const val = this.value;
-            if (val.startsWith('/')) {
-                const search = val.toLowerCase();
-                const filtered = slashCommands.filter(c => c.cmd.startsWith(search));
-                
-                if (filtered.length > 0) {
-                    autocompleteMenu.innerHTML = filtered.map(c => `
-                        <div onclick="selectCommand('${c.cmd}')" class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
-                            <span class="font-mono text-brand font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">${c.cmd}</span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-3 truncate">${c.desc}</span>
-                        </div>
-                    `).join('');
-                    autocompleteMenu.classList.remove('hidden');
+        function loadSession(id) {
+            let data = JSON.parse(localStorage.getItem(id));
+            if (!data) return;
+
+            currentSessionId = id;
+            isIncognito = false;
+            incognitoBadge.classList.add("hidden");
+            
+            chatHistory.length = 0; chatHistory.push(...data.history);
+            for (let key in chatMemories) delete chatMemories[key];
+            Object.assign(chatMemories, data.memories);
+
+            chatBox.innerHTML = '';
+            chatHistory.forEach((msg, idx) => {
+                if (msg.role === 'user') {
+                    chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${msg.content}</div></div>`;
                 } else {
-                    autocompleteMenu.classList.add('hidden');
+                    let loadingId = msg.id || ('msg_' + idx);
+                    msg.id = loadingId;
+                    chatMemories[loadingId] = msg.content;
+
+                    let sourcesHtml = "";
+                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) {
+                        const sourcesList = msg.meta.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
+                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
+                    }
+                    const copyBtnId = `copy-${loadingId}`;
+                    chatBox.innerHTML += `
+                    <div class="flex flex-col max-w-3xl self-start w-full">
+                        <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
+                            <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base">${marked.parse(msg.content)}</div>
+                            ${sourcesHtml}
+                            <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
+                                <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+            if (window.innerWidth < 640) toggleSidebar();
+        }
+
+        // --- NOUVEAU : FONCTION POUR RENOMMER ---
+        function renameSession(id, event) {
+            event.stopPropagation(); // Empêche l'ouverture du chat quand on clique sur le crayon
+            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
+            let chat = allChats.find(c => c.id === id);
+            if (!chat) return;
+
+            let newTitle = prompt("Nouveau nom pour la discussion :", chat.title);
+            if (newTitle !== null && newTitle.trim() !== "") {
+                chat.title = newTitle.trim();
+                localStorage.setItem('myrag_chats', JSON.stringify(allChats));
+                renderSidebar();
+            }
+        }
+
+        function deleteSession(id, event) {
+            event.stopPropagation();
+            localStorage.removeItem(id);
+            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
+            allChats = allChats.filter(c => c.id !== id);
+            localStorage.setItem('myrag_chats', JSON.stringify(allChats));
+            
+            if (currentSessionId === id) startNewChat();
+            else renderSidebar();
+        }
+
+        function renderSidebar() {
+            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
+            allChats.sort((a,b) => b.date - a.date);
+            
+            const listContainer = document.getElementById('chat-list');
+            listContainer.innerHTML = allChats.map(c => `
+                <div class="flex justify-between items-center px-3 py-2.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl cursor-pointer group transition-colors ${c.id === currentSessionId ? 'bg-gray-200 dark:bg-gray-700' : ''}" onclick="loadSession('${c.id}')">
+                    <div class="flex items-center gap-2 truncate text-sm font-medium text-gray-700 dark:text-gray-300 flex-1 min-w-0 pr-2">
+                        <span>💬</span> <span class="truncate">${c.title}</span>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="renameSession('${c.id}', event)" class="text-blue-500 hover:text-blue-600 p-1 hover:scale-110 transition-transform" title="Renommer">✏️</button>
+                        <button onclick="deleteSession('${c.id}', event)" class="text-red-500 hover:text-red-600 p-1 hover:scale-110 transition-transform" title="Supprimer">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearUI(message) {
+            chatHistory.length = 0;
+            for (let key in chatMemories) delete chatMemories[key];
+            chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">${message}</div></div>`;
+        }
+
+        function startNewChat() {
+            currentSessionId = "chat_" + Date.now();
+            isIncognito = false; incognitoBadge.classList.add("hidden");
+            clearUI("Bonjour Arthur ! Prêt pour une nouvelle discussion ? 🚀");
+            renderSidebar();
+            if (window.innerWidth < 640 && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+        }
+
+        function startIncognitoChat() {
+            currentSessionId = "chat_ghost_" + Date.now();
+            isIncognito = true; incognitoBadge.classList.remove("hidden");
+            clearUI("👻 <strong>Mode Incognito activé.</strong> Cette discussion ne sera enregistrée nulle part et s'effacera à la fermeture.");
+            renderSidebar();
+            if (window.innerWidth < 640 && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+        }
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            if (window.innerWidth >= 640) {
+                // Utilise la largeur actuelle appliquée par le style inline, sinon la valeur par défaut
+                let currentWidth = sidebar.style.width || "288px"; 
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    sidebar.style.marginLeft = `-${currentWidth}`;
+                } else {
+                    sidebar.style.marginLeft = '0';
                 }
             } else {
-                autocompleteMenu.classList.add('hidden');
-            }
-        });
-
-        // --- FONCTION QUAND ON CLIQUE SUR UNE SUGGESTION ---
-        function selectCommand(cmd) {
-            autocompleteMenu.classList.add('hidden');
-            if (cmd === '/change') {
-                // Pour change, on ajoute l'espace et on attend la saisie
-                inputField.value = cmd + ' ';
-                inputField.focus();
-            } else {
-                // Pour les autres, on exécute instantanément !
-                inputField.value = cmd;
-                processSlashCommand(cmd);
+                mobileOverlay.classList.toggle('hidden');
             }
         }
 
-        // Fermer l'autocomplétion si on clique ailleurs
-        document.addEventListener('click', function(event) {
-            if (!autocompleteMenu.contains(event.target) && event.target !== inputField) {
-                autocompleteMenu.classList.add('hidden');
-            }
-            if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target)) {
-                sourceMenu.classList.add("hidden");
-            }
-        });
+        window.onload = () => { 
+            renderSidebar();
+            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
+            if (allChats.length > 0) loadSession(allChats[0].id);
+            else startNewChat();
+            setTimeout(() => { showToast("✨ MyRAG est prêt !"); }, 500); 
+        };
 
-        let recognition;
-        let isListening = false;
-
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'fr-FR';
-            recognition.interimResults = true;
-            recognition.continuous = false;
-
-            recognition.onstart = function() {
-                isListening = true;
-                micBtn.classList.add('mic-listening');
-                showToast("🎤 Écoute en cours...", "info");
-                inputField.placeholder = "Je t'écoute...";
-            };
-
-            recognition.onresult = function(event) {
-                let transcript = '';
-                for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
-                inputField.value = transcript;
-                // Déclenche l'événement "input" pour mettre à jour l'autocomplétion si on dicte un slash !
-                inputField.dispatchEvent(new Event('input'));
-            };
-
-            recognition.onerror = function(event) {
-                isListening = false;
-                micBtn.classList.remove('mic-listening');
-                inputField.placeholder = "Pose une question ou tape /...";
-            };
-
-            recognition.onend = function() {
-                isListening = false;
-                micBtn.classList.remove('mic-listening');
-                inputField.placeholder = "Pose une question ou tape /...";
-            };
-        } else { micBtn.style.display = 'none'; }
-
-        function toggleDictation() {
-            if (!recognition) return showToast("Micro non supporté", "error");
-            if (isListening) recognition.stop();
-            else { inputField.value = ''; recognition.start(); }
-        }
-
-        window.onload = () => { setTimeout(() => { showToast("✨ MyRAG est prêt !"); }, 500); };
-
-        function toggleSourceMenu() { sourceMenu.classList.toggle("hidden"); }
-        
         function toggleTheme() {
-            if (htmlElement.classList.contains('dark')) {
-                htmlElement.classList.remove('dark'); themeToggle.innerHTML = "🌙";
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark'); html.classList.add('light');
+                document.getElementById('theme-toggle').innerHTML = "🌙";
             } else {
-                htmlElement.classList.add('dark'); themeToggle.innerHTML = "☀️";
+                html.classList.remove('light'); html.classList.add('dark');
+                document.getElementById('theme-toggle').innerHTML = "☀️";
             }
         }
-        function handleKeyPress(e) { if (e.key === "Enter") askQuestion(); }
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -254,61 +355,156 @@
             setTimeout(() => { toast.classList.add('opacity-0', 'scale-95'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function clearChat() {
-            chatHistory.length = 0; 
-            for (let key in chatMemories) delete chatMemories[key];
-            chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base transition-colors duration-300">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
-            sourceMenu.classList.add("hidden");
-            showToast("Historique effacé avec succès !", "warning");
+        const slashCommands = [
+            { cmd: '/clear', desc: 'Vider le chat et effacer la mémoire' },
+            { cmd: '/reload', desc: 'Recharger la base de données actuelle' },
+            { cmd: '/folder', desc: 'Ouvrir le Finder (Choisir un dossier)' },
+            { cmd: '/file', desc: 'Ouvrir le Finder (Choisir un fichier)' },
+            { cmd: '/change', desc: 'Cibler un chemin précis (/change /Users/...)' },
+            { cmd: '/help', desc: 'Afficher la liste des commandes' }
+        ];
+
+        inputField.addEventListener('input', function() {
+            const val = this.value;
+            if (val.startsWith('/')) {
+                const search = val.toLowerCase();
+                const filtered = slashCommands.filter(c => c.cmd.startsWith(search));
+                if (filtered.length > 0) {
+                    autocompleteMenu.innerHTML = filtered.map(c => `
+                        <div onclick="selectCommand('${c.cmd}')" class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="font-mono text-brand font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">${c.cmd}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-3 truncate">${c.desc}</span>
+                        </div>
+                    `).join('');
+                    autocompleteMenu.classList.remove('hidden');
+                } else autocompleteMenu.classList.add('hidden');
+            } else autocompleteMenu.classList.add('hidden');
+        });
+
+        function selectCommand(cmd) {
+            autocompleteMenu.classList.add('hidden');
+            if (cmd === '/change') { inputField.value = cmd + ' '; inputField.focus(); } 
+            else { inputField.value = cmd; processSlashCommand(cmd); }
         }
+
+        function toggleSourceMenu() { sourceMenu.classList.toggle("hidden"); }
+        document.addEventListener('click', function(event) {
+            if (!autocompleteMenu.contains(event.target) && event.target !== inputField) autocompleteMenu.classList.add('hidden');
+            if (!sourceMenu.contains(event.target) && !plusBtn.contains(event.target)) sourceMenu.classList.add("hidden");
+        });
+
+        function handleKeyPress(e) { if (e.key === "Enter") askQuestion(); }
 
         async function processSlashCommand(commandStr) {
             const args = commandStr.trim().split(" ");
             const cmd = args[0].toLowerCase();
-            inputField.value = ""; 
-            autocompleteMenu.classList.add('hidden'); // Ferme l'autocomplétion au cas où
+            inputField.value = ""; autocompleteMenu.classList.add('hidden');
 
-            if (cmd === "/clear") {
-                clearChat();
-            } else if (cmd === "/reload") {
-                showToast("Commande reçue : Rechargement", "info");
-                changeSource();
-            } else if (cmd === "/folder") {
-                showToast("Commande reçue : Choix de dossier", "info");
-                sourceSelect.value = "custom_folder";
-                handleSourceChange();
-            } else if (cmd === "/file") {
-                showToast("Commande reçue : Choix de fichier", "info");
-                sourceSelect.value = "custom_file";
-                handleSourceChange();
-            } else if (cmd === "/change") {
-                if (args.length > 1) {
-                    const target = args.slice(1).join(" ");
-                    showToast(`Changement de cible : ${target}`, "info");
-                    customPathInput.value = target;
-                    customPathInput.classList.remove("hidden");
-                    sourceSelect.value = "custom_folder";
-                    changeSource();
-                } else {
-                    showToast("Erreur : Spécifiez un chemin (/change /Users/...)", "error");
-                }
-            } else if (cmd === "/help") {
-                chatBox.innerHTML += `
-                <div class="flex flex-col max-w-3xl self-start w-full my-2">
-                    <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-5 rounded-2xl rounded-tl-sm shadow-sm text-blue-800 dark:text-blue-300 leading-relaxed text-base">
-                        <strong>🛠️ Commandes rapides disponibles :</strong><br><br>
-                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/clear</code> : Vider le chat<br><br>
-                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/reload</code> : Recharger la base courante<br><br>
-                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/folder</code> : Ouvrir le Finder (Dossier)<br><br>
-                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/file</code> : Ouvrir le Finder (Fichier)<br><br>
-                        <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis
-                    </div>
-                </div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-                showToast("Menu d'aide affiché", "info");
-            } else {
-                showToast(`Commande non reconnue : ${cmd}`, "error");
+            if (cmd === '/clear') {
+                chatHistory.length = 0; for (let key in chatMemories) delete chatMemories[key];
+                chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
+                saveSession(); showToast("Historique purgé", "warning");
+            } 
+            else if (cmd === '/reload') { showToast("Rechargement...", "info"); changeSource(); }
+            else if (cmd === '/folder') { sourceSelect.value = "custom_folder"; handleSourceChange(); }
+            else if (cmd === '/file') { sourceSelect.value = "custom_file"; handleSourceChange(); }
+            else if (cmd === '/change' && args.length > 1) {
+                customPathInput.value = args.slice(1).join(" ");
+                customPathInput.classList.remove("hidden"); sourceSelect.value = "custom_folder"; changeSource();
             }
+            else showToast(`Commande invalide : ${cmd}`, "error");
+        }
+
+        async function handleSourceChange() {
+            if (sourceSelect.value.startsWith("custom")) {
+                try {
+                    const endpoint = sourceSelect.value === "custom_folder" ? "/pick_folder" : "/pick_file";
+                    const res = await fetch(endpoint);
+                    const data = await res.json();
+                    if (data.path) { customPathInput.value = data.path; customPathInput.classList.remove("hidden"); showToast("Prêt !"); } 
+                    else { customPathInput.value = ""; customPathInput.classList.remove("hidden"); customPathInput.focus(); showToast("Saisie manuelle", "info"); }
+                } catch (error) { customPathInput.value = ""; customPathInput.classList.remove("hidden"); }
+            } else customPathInput.classList.add("hidden");
+        }
+
+        async function changeSource() {
+            let targetPath = sourceSelect.value.startsWith("custom") ? customPathInput.value : "./data";
+            reloadBtn.innerHTML = `⏳`; reloadBtn.disabled = true; sourceMenu.classList.add("hidden"); 
+            const sysId = "sys-" + Date.now();
+            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}"><div class="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 p-3 rounded-xl text-center text-sm shadow-sm animate-pulse">⚙️ Reconstruction depuis : ${targetPath}...</div></div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            try {
+                const response = await fetch("/change_source", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: targetPath }) });
+                const data = await response.json();
+                if(data.status === "success") document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-center text-sm shadow-sm">✅ ${data.message}</div>`;
+                else document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm shadow-sm">❌ ${data.message}</div>`;
+            } catch (error) { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm shadow-sm">❌ Erreur réseau.</div>`; }
+            reloadBtn.innerHTML = `🔄 Recharger`; reloadBtn.disabled = false; chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function askQuestion() {
+            const question = inputField.value.trim();
+            if (!question) { showToast("Veuillez entrer une question 🙃", "warning"); return; }
+            if (question.startsWith("/")) { processSlashCommand(question); return; }
+
+            const historyToSend = chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-6);
+
+            chatHistory.push({ role: "user", content: question });
+            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${question}</div></div>`;
+            inputField.value = ""; autocompleteMenu.classList.add('hidden');
+            chatBox.scrollTop = chatBox.scrollHeight;
+            saveSession();
+
+            const loadingId = "msg_" + Date.now();
+            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full" id="load-container-${loadingId}"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div></div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: question, history: historyToSend }) });
+                const reader = response.body.getReader(); const decoder = new TextDecoder();
+                let accumulatedAnswer = ""; let buffer = ""; let isFirstToken = true;
+                const bubbleContainer = document.getElementById(`load-container-${loadingId}`);
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n"); buffer = lines.pop(); 
+                    
+                    for (const line of lines) {
+                        if (line.trim().startsWith("data: ")) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.token) {
+                                    if (isFirstToken) { bubbleContainer.innerHTML = `<div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full"><div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div><div id="meta-${loadingId}"></div></div>`; isFirstToken = false; }
+                                    accumulatedAnswer += data.token;
+                                    document.getElementById(`text-${loadingId}`).innerHTML = marked.parse(accumulatedAnswer);
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+                                }
+                                if (data.metadata && !isFirstToken) {
+                                    const metaContainer = document.getElementById(`meta-${loadingId}`);
+                                    chatMemories[loadingId] = accumulatedAnswer;
+                                    chatHistory.push({ id: loadingId, role: "ai", content: accumulatedAnswer, meta: data.metadata });
+
+                                    let sourcesHtml = "";
+                                    if (data.metadata.sources && data.metadata.sources.length > 0) {
+                                        const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
+                                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul><div class="mt-2 text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600">⏱️ ${data.metadata.time}s | 📍 ${data.metadata.current_path}</div></div>`;
+                                    }
+                                    const copyBtnId = `copy-${loadingId}`;
+                                    metaContainer.innerHTML = sourcesHtml + `
+                                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
+                                            <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
+                                        </div>`;
+                                    
+                                    saveSession(); 
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                }
+            } catch (error) { document.getElementById(`load-container-${loadingId}`).innerHTML = `<div class="bg-red-50 border border-red-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-red-600 font-medium">❌ Erreur réseau.</div>`; }
         }
 
         async function copyToClipboard(messageId, buttonId) {
@@ -323,156 +519,10 @@
                 const btn = document.getElementById(buttonId);
                 if (btn) {
                     if (!btn.dataset.original) btn.dataset.original = btn.innerHTML;
-                    btn.innerHTML = '✅ Copié !'; btn.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/50', 'dark:text-emerald-400');
-                    setTimeout(() => { btn.innerHTML = btn.dataset.original; btn.classList.remove('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/50', 'dark:text-emerald-400'); }, 2000);
+                    btn.innerHTML = '✅ Copié !'; btn.classList.add('bg-emerald-100', 'text-emerald-700');
+                    setTimeout(() => { btn.innerHTML = btn.dataset.original; btn.classList.remove('bg-emerald-100', 'text-emerald-700'); }, 2000);
                 }
-            } catch (err) { showToast("Erreur lors de la copie", "error"); }
-        }
-
-        async function exportText() {
-            if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
-            let rawText = "🧠 Historique de conversation MyRAG\n Date : " + new Date().toLocaleString() + "\n====================================================\n\n";
-            chatHistory.forEach(msg => {
-                if (msg.role === 'user') rawText += "👤 Vous : " + msg.content + "\n\n"; 
-                else {
-                    rawText += "🤖 MyRAG :\n" + msg.content + "\n\n";
-                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) rawText += "📂 Sources :\n- " + msg.meta.sources.join("\n- ") + "\n";
-                    rawText += "----------------------------------------------------\n\n";
-                }
-            });
-            try {
-                if (window.showSaveFilePicker) {
-                    const handle = await window.showSaveFilePicker({ suggestedName: `MyRAG_Historique_${Date.now()}.txt`, types: [{ description: 'Fichier Texte', accept: {'text/plain': ['.txt']} }] });
-                    const writable = await handle.createWritable(); await writable.write(rawText); await writable.close(); showToast("Historique TXT sauvegardé !");
-                } else {
-                    const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a"); a.href = url; a.download = `MyRAG_Historique_${Date.now()}.txt`; a.click(); URL.revokeObjectURL(url); showToast("Historique TXT téléchargé !");
-                }
-            } catch (error) { if (error.name !== 'AbortError') showToast("Erreur de sauvegarde", "error"); }
-        }
-
-        function exportPdf() {
-            if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
-            showToast("Génération du PDF...", "info");
-            let contentHtml = "";
-            chatHistory.forEach(msg => {
-                if (msg.role === 'user') contentHtml += `<div style="background-color: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;"><strong style="color: #0284c7;">👤 Vous :</strong><br><span style="font-size: 15px;">${msg.content}</span></div>`;
-                else {
-                    let metaHtml = "";
-                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) metaHtml = `<div style="font-size: 11px; color: #6b7280; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e5e7eb;"><strong>📂 Sources :</strong><br>&bull; ${msg.meta.sources.join('<br>&bull; ')}</div>`;
-                    contentHtml += `<div style="padding: 15px; margin-bottom: 30px;"><strong>🤖 MyRAG :</strong><br><div style="line-height: 1.6; font-size: 15px; color: #374151; margin-top: 5px;">${marked.parse(msg.content)}</div>${metaHtml}</div>`;
-                }
-            });
-            const pdfContainer = document.createElement('div');
-            pdfContainer.innerHTML = `<div style="padding: 20px; font-family: sans-serif;"><div style="border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; font-size: 14px; color: #666;"><span style="font-weight: bold; color: #0ea5e9;">🧠 Historique MyRAG Local</span><span>Date : ${new Date().toLocaleString()}</span></div>${contentHtml}</div>`;
-            html2pdf().set({ margin: 15, filename: `MyRAG_Historique_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(pdfContainer).save().then(() => showToast("Historique PDF téléchargé !")).catch(() => showToast("Erreur PDF", "error"));
-        }
-
-        async function handleSourceChange() {
-            if (sourceSelect.value.startsWith("custom")) {
-                try {
-                    const endpoint = sourceSelect.value === "custom_folder" ? "/pick_folder" : "/pick_file";
-                    showToast("Ouverture du Finder macOS...", "info");
-                    const res = await fetch(endpoint);
-                    const data = await res.json();
-                    if (data.path) { customPathInput.value = data.path; customPathInput.classList.remove("hidden"); showToast("Emplacement prêt !"); } 
-                    else { customPathInput.value = ""; customPathInput.classList.remove("hidden"); customPathInput.focus(); showToast("Saisie manuelle possible", "info"); }
-                } catch (error) { customPathInput.value = ""; customPathInput.classList.remove("hidden"); }
-            } else { customPathInput.classList.add("hidden"); }
-        }
-
-        async function changeSource() {
-            let targetPath = sourceSelect.value.startsWith("custom") ? customPathInput.value : "./data";
-            reloadBtn.innerHTML = `<span>⏳</span>...`; reloadBtn.disabled = true; sourceMenu.classList.add("hidden"); 
-            const sysId = "sys-" + Date.now();
-            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}"><div class="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm animate-pulse">⚙️ Reconstruction depuis : ${targetPath}...</div></div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-            try {
-                const response = await fetch("/change_source", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: targetPath }) });
-                const data = await response.json();
-                if(data.status === "success") { document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">✅ ${data.message}</div>`; showToast("Base vectorielle mise à jour");} 
-                else { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">❌ ${data.message}</div>`; showToast("Erreur de compilation", "error");}
-            } catch (error) { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium shadow-sm">❌ Erreur réseau.</div>`; }
-            reloadBtn.innerHTML = `<span>🔄</span> Recharger`; reloadBtn.disabled = false; chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        async function askQuestion() {
-            const question = inputField.value.trim();
-            if (!question) { showToast("Veuillez entrer une question 🙃", "warning"); return; }
-
-            if (question.startsWith("/")) {
-                processSlashCommand(question);
-                return;
-            }
-
-            // --- NOUVEAU : PRÉPARATION DE LA MÉMOIRE ---
-            // On récupère les 6 derniers messages (soit les 3 derniers échanges) pour ne pas saturer l'IA
-            const historyToSend = chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-6);
-
-            // On ajoute la nouvelle question à l'interface
-            chatHistory.push({ role: "user", content: question });
-            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">${question}</div></div>`;
-            
-            inputField.value = ""; 
-            if(typeof autocompleteMenu !== 'undefined') autocompleteMenu.classList.add('hidden');
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            const loadingId = "load-" + Date.now();
-            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full" id="${loadingId}"><div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div></div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            try {
-                // --- NOUVEAU : ON ENVOIE L'HISTORIQUE DANS LE BODY ---
-                const response = await fetch("/chat", { 
-                    method: "POST", 
-                    headers: { "Content-Type": "application/json" }, 
-                    body: JSON.stringify({ question: question, history: historyToSend }) 
-                });
-                
-                const reader = response.body.getReader(); const decoder = new TextDecoder();
-                let accumulatedAnswer = ""; let buffer = ""; let isFirstToken = true;
-                const bubbleContainer = document.getElementById(loadingId);
-
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n"); buffer = lines.pop(); 
-                    
-                    for (const line of lines) {
-                        if (line.trim().startsWith("data: ")) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                if (data.token) {
-                                    if (isFirstToken) { bubbleContainer.innerHTML = `<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full"><div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div><div id="meta-${loadingId}"></div></div>`; isFirstToken = false; }
-                                    accumulatedAnswer += data.token;
-                                    document.getElementById(`text-${loadingId}`).innerHTML = marked.parse(accumulatedAnswer);
-                                    chatBox.scrollTop = chatBox.scrollHeight;
-                                }
-                                if (data.metadata && !isFirstToken) {
-                                    const metaContainer = document.getElementById(`meta-${loadingId}`);
-                                    chatMemories[loadingId] = accumulatedAnswer;
-                                    chatHistory.push({ role: "ai", content: accumulatedAnswer, meta: data.metadata });
-
-                                    let sourcesHtml = "";
-                                    if (data.metadata.sources && data.metadata.sources.length > 0) {
-                                        const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
-                                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul><div class="mt-2 text-gray-400 text-[10px] font-mono bg-gray-50 dark:bg-gray-700/50 p-1.5 rounded inline-block">⏱️ ${data.metadata.time}s | 📍 ${data.metadata.current_path}</div></div>`;
-                                    }
-                                    const copyBtnId = `copy-${loadingId}`;
-                                    metaContainer.innerHTML = sourcesHtml + `
-                                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
-                                            <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">📋 Copier</button>
-                                            <button onclick="exportText()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">💾 TXT</button>
-                                            <button onclick="exportPdf()" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors">📄 PDF</button>
-                                        </div>`;
-                                    chatBox.scrollTop = chatBox.scrollHeight;
-                                }
-                            } catch(e) {}
-                        }
-                    }
-                }
-            } catch (error) { document.getElementById(loadingId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-red-600 dark:text-red-400 font-medium">❌ Erreur réseau.</div>`; }
+            } catch (err) { showToast("Erreur de copie", "error"); }
         }
     </script>
 </body>
