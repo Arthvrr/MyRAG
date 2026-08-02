@@ -405,10 +405,16 @@
                 return;
             }
 
+            // --- NOUVEAU : PRÉPARATION DE LA MÉMOIRE ---
+            // On récupère les 6 derniers messages (soit les 3 derniers échanges) pour ne pas saturer l'IA
+            const historyToSend = chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-6);
+
+            // On ajoute la nouvelle question à l'interface
             chatHistory.push({ role: "user", content: question });
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-md text-base">${question}</div></div>`;
+            
             inputField.value = ""; 
-            autocompleteMenu.classList.add('hidden');
+            if(typeof autocompleteMenu !== 'undefined') autocompleteMenu.classList.add('hidden');
             chatBox.scrollTop = chatBox.scrollHeight;
 
             const loadingId = "load-" + Date.now();
@@ -416,7 +422,13 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                const response = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: question }) });
+                // --- NOUVEAU : ON ENVOIE L'HISTORIQUE DANS LE BODY ---
+                const response = await fetch("/chat", { 
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json" }, 
+                    body: JSON.stringify({ question: question, history: historyToSend }) 
+                });
+                
                 const reader = response.body.getReader(); const decoder = new TextDecoder();
                 let accumulatedAnswer = ""; let buffer = ""; let isFirstToken = true;
                 const bubbleContainer = document.getElementById(loadingId);
