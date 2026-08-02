@@ -1,15 +1,13 @@
-- ajouter mémoire
+1. - intégrer plus de toasts
+3. - ajouter mémoire
 - ajouter lecture de csv, xlsx
-- ajouter lecture d'images
-- ajouter possibilité de soumettre un path, et l'IA ira créer sa base vectorielle à partir de ça (créer commandes spécifiques)
-- calibration/score de confiance
+4. - ajouter lecture d'images
+5. - calibration/score de confiance
 - reranking
 - créer icone site web
+2. - intégrer commandes slash (/clear, /change, /reload,...)
+6. - ajouter pages de discussions
 
 - Mémoire de Conversation : Pour l'instant, ton IA est amnésique à chaque question. Intégrer un module comme ConversationBufferMemory dans LangChain permettrait de faire des suivis. (Exemple : "Quel est le totem de Gaspard ?" puis "Et quelle est son adresse email ?").
 - Calibration et Score de Confiance : Pour limiter les hallucinations, tu pourrais implémenter une logique de calibration sur tes modèles. L'idée serait d'évaluer la certitude de la réponse générée face aux documents extraits, et d'afficher un petit badge de "confiance" (ex: 🟢 Haute, 🔴 Faible) à côté de chaque message.
 - Reranking (Reclassement) : Quand tu as des centaines de documents, extraire les 10 meilleurs morceaux ne suffit pas toujours. Ajouter un modèle de Cross-Encoder léger juste avant de donner le texte au LLM permet de trier les morceaux trouvés par pertinence absolue.
-
-- Rendu Markdown Dynamique : Si ton IA génère du code, des listes à puces ou du texte en gras, ton interface actuelle ne le comprend pas très bien. Intégrer une petite librairie JavaScript comme marked.js permettrait de rendre l'affichage des réponses riche et structuré.
-- Encapsulation macOS Native : Puisque tu développes des applications natives pour macOS, tu pourrais complètement te passer de Safari ! Il te suffirait de créer une petite app avec une WKWebView qui pointe vers ton port localhost. MyRAG deviendrait un vrai logiciel dans ton Dock, avec sa propre icône.
-- Gestion des Erreurs Élégante (Toasts) : Remplacer les messages d'erreur textuels ("Erreur réseau") par des notifications "Toast" stylisées qui apparaissent en bas de l'écran puis disparaissent.

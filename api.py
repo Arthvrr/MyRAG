@@ -21,18 +21,20 @@ model = OllamaLLM(model="llama3")
 
 template = """Tu es MyRAG, l'assistant personnel d'Arthur.
 
-Voici le contexte extrait des documents : 
+Voici le contexte extrait des documents personnels d'Arthur : 
 {context}
 
-Voici la question :
+Voici la question d'Arthur :
 {question}
 
 INSTRUCTIONS STRICTES :
-1. Réponds de manière CLAIRE, DIRECTE et CONCISE.
-2. Ne justifie pas ta réponse.
-3. Ne cite pas les phrases du contexte en entier.
-4. Si la réponse n'est pas dans le contexte, dis-le poliment.
+1. Réponds de manière CLAIRE, DIRECTE et CONCISE. Va droit au but.
+2. Ne justifie pas ta réponse en racontant comment tu as trouvé l'information, donne simplement la réponse.
+3. Ne cite pas les phrases du contexte en entier, extrais uniquement l'information demandée.
+4. Ne dis jamais "Dans le document X j'ai trouvé...", réponds naturellement comme un humain.
+5. Si la réponse n'est pas dans le contexte, dis-le poliment.
 """
+
 prompt = ChatPromptTemplate.from_template(template)
 chain = prompt | model
 
