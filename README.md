@@ -20,7 +20,7 @@
 *   **LLM :** `llama3` (via Ollama)
 *   **Embeddings :** `nomic-embed-text` (via Ollama)
 *   **Vector Store :** ChromaDB
-*   **Framework :** LangChain[cite: 4, 5]
+*   **Framework :** LangChain
 *   **Loaders :** PyMuPDF (pour les `.pdf`) et TextLoader (pour les `.txt`)
 
 ## 🎮 Comment l'utiliser ?

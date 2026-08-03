@@ -32,8 +32,6 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
-        
-        /* Assure que la sidebar ne devient pas trop petite ni trop grande */
         #sidebar { min-width: 200px; max-width: 600px; }
     </style>
 </head>
@@ -46,7 +44,6 @@
         <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden transition-opacity sm:hidden"></div>
 
         <aside id="sidebar" class="absolute sm:relative z-40 w-72 h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 transform -translate-x-full sm:translate-x-0 flex-shrink-0">
-            
             <div id="sidebar-resizer" class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-brand/50 active:bg-brand transition-colors z-50"></div>
 
             <div class="p-4 flex gap-2 border-b border-gray-200 dark:border-gray-700 pr-3">
@@ -142,7 +139,7 @@
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none'; // Empêche de sélectionner le texte pendant qu'on glisse
+            document.body.style.userSelect = 'none';
         });
 
         document.addEventListener('mousemove', (e) => {
@@ -186,7 +183,8 @@
             if (!currentChat) {
                 let title = chatHistory.find(m => m.role === 'user')?.content || "Nouvelle discussion";
                 if (title.length > 25) title = title.substring(0, 25) + "...";
-                currentChat = { id: currentSessionId, title: title, date: Date.now() };
+                // Ajout de la propriété pinned
+                currentChat = { id: currentSessionId, title: title, date: Date.now(), pinned: false };
                 allChats.push(currentChat);
             } else {
                 currentChat.date = Date.now();
@@ -211,8 +209,14 @@
 
             chatBox.innerHTML = '';
             chatHistory.forEach((msg, idx) => {
+                let timeHtml = msg.time ? `<span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${msg.time}</span>` : '';
+
                 if (msg.role === 'user') {
-                    chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${msg.content}</div></div>`;
+                    chatBox.innerHTML += `
+                    <div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end mb-4">
+                        ${timeHtml}
+                        <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${msg.content}</div>
+                    </div>`;
                 } else {
                     let loadingId = msg.id || ('msg_' + idx);
                     msg.id = loadingId;
@@ -223,12 +227,21 @@
                         const sourcesList = msg.meta.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
                         sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
                     }
+
+                    // Reconstruire les stats si elles existent
+                    let statsHtml = "";
+                    if (msg.meta && msg.meta.stats) {
+                        statsHtml = `<div class="mt-2 text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600">${msg.meta.stats}</div>`;
+                    }
+
                     const copyBtnId = `copy-${loadingId}`;
                     chatBox.innerHTML += `
-                    <div class="flex flex-col max-w-3xl self-start w-full">
+                    <div class="flex flex-col max-w-3xl self-start w-full mb-4">
+                        ${timeHtml}
                         <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
                             <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base">${marked.parse(msg.content)}</div>
                             ${sourcesHtml}
+                            ${statsHtml}
                             <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
                                 <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
                             </div>
@@ -238,11 +251,23 @@
             });
             chatBox.scrollTop = chatBox.scrollHeight;
             if (window.innerWidth < 640) toggleSidebar();
+            renderSidebar();
         }
 
-        // --- NOUVEAU : FONCTION POUR RENOMMER ---
+        // --- NOUVEAU : FONCTION POUR ÉPINGLER ---
+        function togglePinSession(id, event) {
+            event.stopPropagation();
+            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
+            let chat = allChats.find(c => c.id === id);
+            if (chat) {
+                chat.pinned = !chat.pinned;
+                localStorage.setItem('myrag_chats', JSON.stringify(allChats));
+                renderSidebar();
+            }
+        }
+
         function renameSession(id, event) {
-            event.stopPropagation(); // Empêche l'ouverture du chat quand on clique sur le crayon
+            event.stopPropagation();
             let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
             let chat = allChats.find(c => c.id === id);
             if (!chat) return;
@@ -268,7 +293,13 @@
 
         function renderSidebar() {
             let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
-            allChats.sort((a,b) => b.date - a.date);
+            
+            // Tri : Les épinglés en premier, puis les plus récents
+            allChats.sort((a,b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return b.date - a.date;
+            });
             
             const listContainer = document.getElementById('chat-list');
             listContainer.innerHTML = allChats.map(c => `
@@ -277,6 +308,7 @@
                         <span>💬</span> <span class="truncate">${c.title}</span>
                     </div>
                     <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="togglePinSession('${c.id}', event)" class="p-1 hover:scale-110 transition-transform ${c.pinned ? 'text-amber-500' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'}" title="${c.pinned ? 'Désépingler' : 'Épingler'}">📌</button>
                         <button onclick="renameSession('${c.id}', event)" class="text-blue-500 hover:text-blue-600 p-1 hover:scale-110 transition-transform" title="Renommer">✏️</button>
                         <button onclick="deleteSession('${c.id}', event)" class="text-red-500 hover:text-red-600 p-1 hover:scale-110 transition-transform" title="Supprimer">🗑️</button>
                     </div>
@@ -309,7 +341,6 @@
         function toggleSidebar() {
             sidebar.classList.toggle('-translate-x-full');
             if (window.innerWidth >= 640) {
-                // Utilise la largeur actuelle appliquée par le style inline, sinon la valeur par défaut
                 let currentWidth = sidebar.style.width || "288px"; 
                 if (sidebar.classList.contains('-translate-x-full')) {
                     sidebar.style.marginLeft = `-${currentWidth}`;
@@ -447,16 +478,25 @@
             if (!question) { showToast("Veuillez entrer une question 🙃", "warning"); return; }
             if (question.startsWith("/")) { processSlashCommand(question); return; }
 
-            const historyToSend = chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-6);
+            const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const historyToSend = chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-6); //HISTORIQUE DES 6 DERNIERS MESSAGES (3 IA + 3 MOI)
 
-            chatHistory.push({ role: "user", content: question });
-            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end"><div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${question}</div></div>`;
+            chatHistory.push({ role: "user", content: question, time: timeStr });
+            chatBox.innerHTML += `
+            <div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end mb-4">
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${timeStr}</span>
+                <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${question}</div>
+            </div>`;
             inputField.value = ""; autocompleteMenu.classList.add('hidden');
             chatBox.scrollTop = chatBox.scrollHeight;
             saveSession();
 
             const loadingId = "msg_" + Date.now();
-            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full" id="load-container-${loadingId}"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div></div>`;
+            chatBox.innerHTML += `
+            <div class="flex flex-col max-w-3xl self-start w-full mb-4" id="load-container-${loadingId}">
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${timeStr}</span>
+                <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div>
+            </div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
@@ -476,7 +516,15 @@
                             try {
                                 const data = JSON.parse(line.slice(6));
                                 if (data.token) {
-                                    if (isFirstToken) { bubbleContainer.innerHTML = `<div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full"><div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div><div id="meta-${loadingId}"></div></div>`; isFirstToken = false; }
+                                    if (isFirstToken) { 
+                                        bubbleContainer.innerHTML = `
+                                        <span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${timeStr}</span>
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
+                                            <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div>
+                                            <div id="meta-${loadingId}"></div>
+                                        </div>`; 
+                                        isFirstToken = false; 
+                                    }
                                     accumulatedAnswer += data.token;
                                     document.getElementById(`text-${loadingId}`).innerHTML = marked.parse(accumulatedAnswer);
                                     chatBox.scrollTop = chatBox.scrollHeight;
@@ -484,15 +532,23 @@
                                 if (data.metadata && !isFirstToken) {
                                     const metaContainer = document.getElementById(`meta-${loadingId}`);
                                     chatMemories[loadingId] = accumulatedAnswer;
-                                    chatHistory.push({ id: loadingId, role: "ai", content: accumulatedAnswer, meta: data.metadata });
+                                    
+                                    // --- NOUVEAU : CALCUL DES STATISTIQUES OLLAMA (Mots & Vitesse) ---
+                                    const wordCount = accumulatedAnswer.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                    const speed = (wordCount / data.metadata.time).toFixed(1);
+                                    const statsString = `⏱️ ${data.metadata.time}s | ⚡ ${speed} mots/s | 📏 ${wordCount} mots | 📍 ${data.metadata.current_path}`;
+
+                                    chatHistory.push({ id: loadingId, role: "ai", content: accumulatedAnswer, time: timeStr, meta: { sources: data.metadata.sources, stats: statsString } });
 
                                     let sourcesHtml = "";
                                     if (data.metadata.sources && data.metadata.sources.length > 0) {
                                         const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
-                                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul><div class="mt-2 text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600">⏱️ ${data.metadata.time}s | 📍 ${data.metadata.current_path}</div></div>`;
+                                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
                                     }
+
                                     const copyBtnId = `copy-${loadingId}`;
                                     metaContainer.innerHTML = sourcesHtml + `
+                                        <div class="mt-2 text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600">${statsString}</div>
                                         <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
                                             <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
                                         </div>`;
@@ -506,6 +562,23 @@
                 }
             } catch (error) { document.getElementById(`load-container-${loadingId}`).innerHTML = `<div class="bg-red-50 border border-red-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-red-600 font-medium">❌ Erreur réseau.</div>`; }
         }
+
+        // Le code Web Speech API / Dictation reste ici...
+        let recognition;
+        let isListening = false;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'fr-FR'; recognition.interimResults = true; recognition.continuous = false;
+            recognition.onstart = function() { isListening = true; micBtn.classList.add('mic-listening'); inputField.placeholder = "Je t'écoute..."; };
+            recognition.onresult = function(event) {
+                let transcript = ''; for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
+                inputField.value = transcript; inputField.dispatchEvent(new Event('input'));
+            };
+            recognition.onerror = function() { isListening = false; micBtn.classList.remove('mic-listening'); inputField.placeholder = "Pose une question ou tape /..."; };
+            recognition.onend = function() { isListening = false; micBtn.classList.remove('mic-listening'); inputField.placeholder = "Pose une question ou tape /..."; };
+        } else { micBtn.style.display = 'none'; }
+        function toggleDictation() { if (!recognition) return showToast("Micro non supporté", "error"); if (isListening) recognition.stop(); else { inputField.value = ''; recognition.start(); } }
 
         async function copyToClipboard(messageId, buttonId) {
             const rawText = chatMemories[messageId];
