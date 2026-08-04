@@ -7,6 +7,7 @@ import os
 import gc
 import json
 import chromadb
+import re
 
 # Import initial
 from langchain_ollama.llms import OllamaLLM
@@ -98,7 +99,6 @@ def chat(request: ChatRequest):
         try:
             start_time = time.time()
             
-            # 1. Formatage de l'historique pour l'IA
             formatted_history = ""
             for msg in request.history:
                 role = "Arthur" if msg.get("role") == "user" else "MyRAG"
@@ -106,27 +106,60 @@ def chat(request: ChatRequest):
             if not formatted_history:
                 formatted_history = "(Début de la conversation. Aucun historique pour le moment.)"
 
-            # 2. Recherche du contexte
-            # (Astuce: on cherche avec la question actuelle)
-            relevant_docs = current_retriever.invoke(request.question)
-            context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
-            sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
+            # 1. Aiguilleur (Excel vs ChromaDB)
+            if os.path.isfile(current_path) and current_path.lower().endswith(('.csv', '.xlsx')):
+                context_text = get_tabular_context(current_path)
+                sources_uniques = [current_path]
+            else:
+                relevant_docs = current_retriever.invoke(request.question)
+                context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
+                sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
             
-            # 3. Transmission avec la mémoire !
+            # Variable pour stocker la réponse complète afin de pouvoir l'évaluer
+            full_answer = ""
+            
+            # 2. Transmission en streaming
             for chunk in chain.stream({
                 "context": context_text, 
                 "question": request.question,
-                "chat_history": formatted_history # Injection de la mémoire
+                "chat_history": formatted_history
             }):
+                full_answer += chunk # On capture la réponse en direct
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
             
+            # ==========================================
+            # 3. NOUVEAU : AUTO-ÉVALUATION (Self-Reflection)
+            # ==========================================
+            eval_template = """Tu es un juge IA très strict. 
+            Contexte extrait : {context}
+            Réponse générée : {answer}
+            
+            Analyse si la réponse générée est factuellement correcte et soutenue par le contexte.
+            Donne un score de 0 à 100.
+            Tu DOIS répondre UNIQUEMENT par un JSON valide, sans aucun texte avant ou après.
+            Exemple : {{"score": 95}}
+            """
+            eval_prompt = ChatPromptTemplate.from_template(eval_template)
+            eval_chain = eval_prompt | model
+            
+            try:
+                # On lance l'évaluation en silence
+                raw_eval = eval_chain.invoke({"context": context_text, "answer": full_answer})
+                # On extrait le chiffre avec Regex pour éviter les bugs si le LLM bavarde
+                match = re.search(r'["\']?score["\']?\s*:\s*(\d+)', raw_eval, re.IGNORECASE)
+                confidence_self = int(match.group(1)) if match else "N/A"
+            except Exception as e:
+                confidence_self = "Err"
+            # ==========================================
+
             elapsed_time = round(time.time() - start_time, 2)
             
             meta_payload = {
                 'metadata': {
                     'sources': sources_uniques,
                     'time': elapsed_time,
-                    'current_path': current_path
+                    'current_path': current_path,
+                    'confidence_self': confidence_self # Ajout du score !
                 }
             }
             yield f"data: {json.dumps(meta_payload)}\n\n"
