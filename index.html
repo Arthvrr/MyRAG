@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,17 +9,19 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
     <script>
         tailwind.config = {
+            darkMode: 'class', 
             theme: { extend: { colors: { brand: '#0ea5e9', brandDark: '#0284c7' } } }
         }
     </script>
     <style>
         .prose pre { padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9em; }
         .prose :not(pre) > code { background-color: #f3f4f6; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; color: #ef4444; }
+        .dark .prose :not(pre) > code { background-color: #1f2937; color: #fca5a5; }
         .prose ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.5rem; }
         .prose p { margin-bottom: 0.5rem; }
@@ -29,10 +31,11 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
         #sidebar { min-width: 200px; max-width: 600px; }
     </style>
 </head>
-<body class="bg-white text-gray-800 h-screen font-sans overflow-hidden">
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 h-screen font-sans overflow-hidden">
     
     <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -40,14 +43,14 @@
 
         <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden transition-opacity sm:hidden"></div>
 
-        <aside id="sidebar" class="absolute sm:relative z-40 w-72 h-full bg-gray-50 border-r border-gray-200 flex flex-col transition-transform duration-300 transform -translate-x-full sm:translate-x-0 flex-shrink-0">
+        <aside id="sidebar" class="absolute sm:relative z-40 w-72 h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 transform -translate-x-full sm:translate-x-0 flex-shrink-0">
             <div id="sidebar-resizer" class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-brand/50 active:bg-brand transition-colors z-50"></div>
 
-            <div class="p-4 flex gap-2 border-b border-gray-200 pr-3">
+            <div class="p-4 flex gap-2 border-b border-gray-200 dark:border-gray-700 pr-3">
                 <button onclick="startNewChat()" class="flex-1 bg-brand hover:bg-brandDark text-white font-medium py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm text-sm">
                     <span>➕</span> Nouveau
                 </button>
-                <button onclick="startIncognitoChat()" class="bg-gray-800 hover:bg-gray-700 text-white font-medium p-2.5 rounded-xl transition-colors shadow-sm text-sm" title="Mode Incognito (Sans sauvegarde)">
+                <button onclick="startIncognitoChat()" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium p-2.5 rounded-xl transition-colors shadow-sm text-sm" title="Mode Incognito (Sans sauvegarde)">
                     👻
                 </button>
             </div>
@@ -55,58 +58,59 @@
             <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1 pr-4" id="chat-list">
                 </div>
 
-            <div class="p-4 border-t border-gray-200 text-xs text-center text-gray-500">
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-center text-gray-500 dark:text-gray-400">
                 MyRAG v1.0 • Arthur Louette
             </div>
         </aside>
 
-        <div class="flex-1 flex flex-col h-full bg-white w-full min-w-0 transition-colors duration-300">
+        <div class="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 w-full min-w-0 transition-colors duration-300">
             
-            <header class="border-b border-gray-200 p-4 shadow-sm flex justify-between items-center gap-4 z-10 transition-colors duration-300">
+            <header class="border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex justify-between items-center gap-4 z-10 transition-colors duration-300">
                 <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button onclick="toggleSidebar()" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
-                    <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 truncate">
+                    <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white truncate">
                         <span>🧠</span> MyRAG <span class="text-brand font-light hidden sm:inline">Local</span>
                         <span id="incognito-badge" class="hidden text-xs bg-gray-800 text-white px-2 py-0.5 rounded-md font-mono">👻 Incognito</span>
                     </h1>
                 </div>
                 <div class="flex items-center gap-3">
+                    <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xl">🌙</button>
                 </div>
             </header>
 
             <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 w-full mx-auto max-w-4xl pb-10">
                 <div class="flex flex-col max-w-3xl self-start w-full">
-                    <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 leading-relaxed text-base">
+                    <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">
                         Bonjour Arthur ! Prêt pour une nouvelle discussion ? 🚀
                     </div>
                 </div>
             </main>
 
-            <footer class="bg-white border-t border-gray-200 p-4 flex justify-center transition-colors duration-300">
+            <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 flex justify-center transition-colors duration-300">
                 <div class="flex w-full max-w-4xl gap-3 items-end relative">
                     
                     <div class="relative flex items-center">
-                        <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
-                            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">📂 Base Vectorielle</span>
-                            <select id="source-select" class="bg-gray-50 text-sm focus:outline-none text-gray-700 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 w-full" onchange="handleSourceChange()">
-                                <option value="./data">📁 ./data (Défaut)</option>
-                                <option value="custom_folder">📁 Parcourir un dossier...</option>
-                                <option value="custom_file" class="text-brand font-bold">📄 Parcourir un fichier...</option>
+                        <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
+                            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
+                            <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
+                                <option value="./data" class="dark:bg-gray-800">📁 ./data (Défaut)</option>
+                                <option value="custom_folder" class="dark:bg-gray-800">📁 Parcourir un dossier...</option>
+                                <option value="custom_file" class="dark:bg-gray-800 text-brand font-bold">📄 Parcourir un fichier...</option>
                             </select>
-                            <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none w-full shadow-sm">
-                            <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1"><span>🔄</span> Recharger</button>
+                            <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
+                            <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1"><span>🔄</span> Recharger</button>
                         </div>
 
-                        <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 bg-gray-50 hover:bg-gray-200 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm border border-gray-200" title="Gérer la source">
+                        <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white bg-gray-50 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm border border-gray-200 dark:border-gray-700" title="Gérer la source">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         </button>
                     </div>
 
                     <div class="relative flex-1">
-                        <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden z-50"></div>
-                        <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 border border-gray-200 focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 outline-none transition-all shadow-sm">
+                        <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden z-50"></div>
+                        <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
                         <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1">🎤</button>
                     </div>
                     
@@ -204,7 +208,7 @@
 
             chatBox.innerHTML = '';
             chatHistory.forEach((msg, idx) => {
-                let timeHtml = msg.time ? `<span class="text-[10px] text-gray-400 mb-1 px-1">${msg.time}</span>` : '';
+                let timeHtml = msg.time ? `<span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${msg.time}</span>` : '';
 
                 if (msg.role === 'user') {
                     chatBox.innerHTML += `
@@ -219,30 +223,29 @@
 
                     let sourcesHtml = "";
                     if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) {
-                        const sourcesList = msg.meta.sources.map(s => `<li class="truncate text-gray-400 py-0.5 text-xs">• ${s}</li>`).join('');
-                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 text-sm"><strong class="text-gray-500 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
+                        const sourcesList = msg.meta.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
+                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
                     }
 
                     let statsHtml = "";
                     if (msg.meta && msg.meta.stats) {
-                        statsHtml = `<div class="text-gray-400 text-[10px] font-mono bg-white p-1.5 rounded inline-block border border-gray-100">${msg.meta.stats}</div>`;
+                        statsHtml = `<div class="text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600">${msg.meta.stats}</div>`;
                     }
 
-                    // Reconstruire l'auto-évaluation si elle existe
                     let evalBadge = "";
                     if (msg.meta && msg.meta.confidence_self !== undefined) {
                         let score = msg.meta.confidence_self;
-                        let colorClass = "bg-gray-100 text-gray-800 border-gray-200";
+                        let colorClass = "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300";
                         let icon = "❔";
                         
                         if (typeof score === 'number') {
-                            if (score >= 80) { colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200"; icon = "🟢"; }
-                            else if (score >= 50) { colorClass = "bg-amber-50 text-amber-700 border-amber-200"; icon = "🟠"; }
-                            else { colorClass = "bg-red-50 text-red-700 border-red-200"; icon = "🔴"; }
+                            if (score >= 80) { colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"; icon = "🟢"; }
+                            else if (score >= 50) { colorClass = "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"; icon = "🟠"; }
+                            else { colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"; icon = "🔴"; }
                             score = score + "%";
                         }
                         
-                        evalBadge = `<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 text-xs font-semibold ${colorClass}" title="Score d'Auto-évaluation Llama 3">
+                        evalBadge = `<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-700 text-xs font-semibold ${colorClass}" title="Score d'Auto-évaluation Llama 3">
                             <span>${icon}</span> Auto-Éval : ${score}
                         </div>`;
                     }
@@ -251,15 +254,17 @@
                     chatBox.innerHTML += `
                     <div class="flex flex-col max-w-3xl self-start w-full mb-4">
                         ${timeHtml}
-                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
-                            <div class="prose max-w-none text-gray-700 text-base">${marked.parse(msg.content)}</div>
+                        <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
+                            <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base">${marked.parse(msg.content)}</div>
                             ${sourcesHtml}
                             <div class="mt-3 flex flex-wrap items-center gap-2">
                                 ${evalBadge}
                                 ${statsHtml}
                             </div>
-                            <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-2 justify-end">
-                                <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
+                            <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
+                                <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
+                                <button onclick="exportText()" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">💾 TXT</button>
+                                <button onclick="exportPdf()" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📄 PDF</button>
                             </div>
                         </div>
                     </div>`;
@@ -317,12 +322,12 @@
             
             const listContainer = document.getElementById('chat-list');
             listContainer.innerHTML = allChats.map(c => `
-                <div class="flex justify-between items-center px-3 py-2.5 hover:bg-gray-200 rounded-xl cursor-pointer group transition-colors ${c.id === currentSessionId ? 'bg-gray-200' : ''}" onclick="loadSession('${c.id}')">
-                    <div class="flex items-center gap-2 truncate text-sm font-medium text-gray-700 flex-1 min-w-0 pr-2">
+                <div class="flex justify-between items-center px-3 py-2.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl cursor-pointer group transition-colors ${c.id === currentSessionId ? 'bg-gray-200 dark:bg-gray-700' : ''}" onclick="loadSession('${c.id}')">
+                    <div class="flex items-center gap-2 truncate text-sm font-medium text-gray-700 dark:text-gray-300 flex-1 min-w-0 pr-2">
                         <span>💬</span> <span class="truncate">${c.title}</span>
                     </div>
                     <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="togglePinSession('${c.id}', event)" class="p-1 hover:scale-110 transition-transform ${c.pinned ? 'text-amber-500' : 'text-gray-400 hover:text-gray-600'}" title="${c.pinned ? 'Désépingler' : 'Épingler'}">📌</button>
+                        <button onclick="togglePinSession('${c.id}', event)" class="p-1 hover:scale-110 transition-transform ${c.pinned ? 'text-amber-500' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'}" title="${c.pinned ? 'Désépingler' : 'Épingler'}">📌</button>
                         <button onclick="renameSession('${c.id}', event)" class="text-blue-500 hover:text-blue-600 p-1 hover:scale-110 transition-transform" title="Renommer">✏️</button>
                         <button onclick="deleteSession('${c.id}', event)" class="text-red-500 hover:text-red-600 p-1 hover:scale-110 transition-transform" title="Supprimer">🗑️</button>
                     </div>
@@ -333,7 +338,7 @@
         function clearUI(message) {
             chatHistory.length = 0;
             for (let key in chatMemories) delete chatMemories[key];
-            chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 leading-relaxed text-base">${message}</div></div>`;
+            chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">${message}</div></div>`;
         }
 
         function startNewChat() {
@@ -371,22 +376,78 @@
             let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
             if (allChats.length > 0) loadSession(allChats[0].id);
             else startNewChat();
+            
+            // Appliquer le thème s'il est déjà dark dans le localStorage ou HTML
+            if (document.documentElement.classList.contains('dark')) {
+                document.getElementById('theme-toggle').innerHTML = "☀️";
+            }
             setTimeout(() => { showToast("✨ MyRAG est prêt !"); }, 500); 
         };
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark'); html.classList.add('light');
+                document.getElementById('theme-toggle').innerHTML = "🌙";
+            } else {
+                html.classList.remove('light'); html.classList.add('dark');
+                document.getElementById('theme-toggle').innerHTML = "☀️";
+            }
+        }
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-sm font-medium bg-white border-gray-200 text-gray-800`;
+            toast.className = `transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-sm font-medium bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100`;
             let icon = type === 'error' ? "❌" : (type === 'info' ? "💬" : (type === 'warning' ? "⚡" : "✅"));
-            if (type === 'error') toast.classList.add('border-red-200', 'bg-red-50', 'text-red-800');
-            else if (type === 'info') toast.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-800');
-            else if (type === 'warning') toast.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-800');
-            else toast.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-800');
+            if (type === 'error') toast.classList.add('border-red-200', 'bg-red-50', 'text-red-800', 'dark:bg-red-900/30');
+            else if (type === 'info') toast.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-800', 'dark:bg-blue-900/30');
+            else if (type === 'warning') toast.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-800', 'dark:bg-amber-900/30');
+            else toast.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-800', 'dark:bg-emerald-900/30');
             toast.innerHTML = `<span>${icon}</span><span class="flex-1">${message}</span>`;
             container.appendChild(toast);
             setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
             setTimeout(() => { toast.classList.add('opacity-0', 'scale-95'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        // --- COMMANDES EXPORT TXT ET PDF ---
+        async function exportText() {
+            if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
+            let rawText = "🧠 Historique de conversation MyRAG\n Date : " + new Date().toLocaleString() + "\n====================================================\n\n";
+            chatHistory.forEach(msg => {
+                if (msg.role === 'user') rawText += "👤 Vous : " + msg.content + "\n\n"; 
+                else {
+                    rawText += "🤖 MyRAG :\n" + msg.content + "\n\n";
+                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) rawText += "📂 Sources :\n- " + msg.meta.sources.join("\n- ") + "\n";
+                    rawText += "----------------------------------------------------\n\n";
+                }
+            });
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({ suggestedName: `MyRAG_Historique_${Date.now()}.txt`, types: [{ description: 'Fichier Texte', accept: {'text/plain': ['.txt']} }] });
+                    const writable = await handle.createWritable(); await writable.write(rawText); await writable.close(); showToast("Historique TXT sauvegardé !");
+                } else {
+                    const blob = new Blob([rawText], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a"); a.href = url; a.download = `MyRAG_Historique_${Date.now()}.txt`; a.click(); URL.revokeObjectURL(url); showToast("Historique TXT téléchargé !");
+                }
+            } catch (error) { if (error.name !== 'AbortError') showToast("Erreur de sauvegarde", "error"); }
+        }
+
+        function exportPdf() {
+            if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
+            showToast("Génération du PDF...", "info");
+            let contentHtml = "";
+            chatHistory.forEach(msg => {
+                if (msg.role === 'user') contentHtml += `<div style="background-color: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #0ea5e9;"><strong style="color: #0284c7;">👤 Vous :</strong><br><span style="font-size: 15px;">${msg.content}</span></div>`;
+                else {
+                    let metaHtml = "";
+                    if (msg.meta && msg.meta.sources && msg.meta.sources.length > 0) metaHtml = `<div style="font-size: 11px; color: #6b7280; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e5e7eb;"><strong>📂 Sources :</strong><br>&bull; ${msg.meta.sources.join('<br>&bull; ')}</div>`;
+                    contentHtml += `<div style="padding: 15px; margin-bottom: 30px;"><strong>🤖 MyRAG :</strong><br><div style="line-height: 1.6; font-size: 15px; color: #374151; margin-top: 5px;">${marked.parse(msg.content)}</div>${metaHtml}</div>`;
+                }
+            });
+            const pdfContainer = document.createElement('div');
+            pdfContainer.innerHTML = `<div style="padding: 20px; font-family: sans-serif;"><div style="border-bottom: 2px solid #0ea5e9; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; font-size: 14px; color: #666;"><span style="font-weight: bold; color: #0ea5e9;">🧠 Historique MyRAG Local</span><span>Date : ${new Date().toLocaleString()}</span></div>${contentHtml}</div>`;
+            html2pdf().set({ margin: 15, filename: `MyRAG_Historique_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(pdfContainer).save().then(() => showToast("Historique PDF téléchargé !")).catch(() => showToast("Erreur PDF", "error"));
         }
 
         const slashCommands = [
@@ -405,9 +466,9 @@
                 const filtered = slashCommands.filter(c => c.cmd.startsWith(search));
                 if (filtered.length > 0) {
                     autocompleteMenu.innerHTML = filtered.map(c => `
-                        <div onclick="selectCommand('${c.cmd}')" class="px-4 py-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors border-b border-gray-100 last:border-0">
-                            <span class="font-mono text-brand font-bold text-sm bg-blue-50 px-2 py-0.5 rounded">${c.cmd}</span>
-                            <span class="text-xs text-gray-500 ml-3 truncate">${c.desc}</span>
+                        <div onclick="selectCommand('${c.cmd}')" class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
+                            <span class="font-mono text-brand font-bold text-sm bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">${c.cmd}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-3 truncate">${c.desc}</span>
                         </div>
                     `).join('');
                     autocompleteMenu.classList.remove('hidden');
@@ -436,7 +497,7 @@
 
             if (cmd === '/clear') {
                 chatHistory.length = 0; for (let key in chatMemories) delete chatMemories[key];
-                chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 leading-relaxed text-base">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
+                chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
                 saveSession(); showToast("Historique purgé", "warning");
             } 
             else if (cmd === '/reload') { showToast("Rechargement...", "info"); changeSource(); }
@@ -449,13 +510,13 @@
             else if (cmd === '/help') {
                 chatHistory.push({ role: "user", content: "/help", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
                 const helpHtml = `
-                <div class="bg-blue-50 border border-blue-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-blue-800 leading-relaxed text-base w-full">
+                <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-5 rounded-2xl rounded-tl-sm shadow-sm text-blue-800 dark:text-blue-300 leading-relaxed text-base w-full">
                     <strong>🛠️ Commandes rapides disponibles :</strong><br><br>
-                    <code class="bg-white px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/clear</code> : Vider le chat<br><br>
-                    <code class="bg-white px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/reload</code> : Recharger la base courante<br><br>
-                    <code class="bg-white px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/folder</code> : Ouvrir le Finder (Dossier)<br><br>
-                    <code class="bg-white px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/file</code> : Ouvrir le Finder (Fichier)<br><br>
-                    <code class="bg-white px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/clear</code> : Vider le chat<br><br>
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/reload</code> : Recharger la base courante<br><br>
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/folder</code> : Ouvrir le Finder (Dossier)<br><br>
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/file</code> : Ouvrir le Finder (Fichier)<br><br>
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis
                 </div>`;
                 chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full mb-4">${helpHtml}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -480,14 +541,14 @@
             let targetPath = sourceSelect.value.startsWith("custom") ? customPathInput.value : "./data";
             reloadBtn.innerHTML = `⏳`; reloadBtn.disabled = true; sourceMenu.classList.add("hidden"); 
             const sysId = "sys-" + Date.now();
-            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}"><div class="bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-xl text-center text-sm shadow-sm animate-pulse">⚙️ Reconstruction depuis : ${targetPath}...</div></div>`;
+            chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}"><div class="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 p-3 rounded-xl text-center text-sm shadow-sm animate-pulse">⚙️ Reconstruction depuis : ${targetPath}...</div></div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
             try {
                 const response = await fetch("/change_source", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: targetPath }) });
                 const data = await response.json();
-                if(data.status === "success") document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded-xl text-center text-sm shadow-sm">✅ ${data.message}</div>`;
-                else document.getElementById(sysId).innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-center text-sm shadow-sm">❌ ${data.message}</div>`;
-            } catch (error) { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-center text-sm shadow-sm">❌ Erreur réseau.</div>`; }
+                if(data.status === "success") document.getElementById(sysId).innerHTML = `<div class="bg-emerald-50 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl text-center text-sm shadow-sm">✅ ${data.message}</div>`;
+                else document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm shadow-sm">❌ ${data.message}</div>`;
+            } catch (error) { document.getElementById(sysId).innerHTML = `<div class="bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 p-3 rounded-xl text-center text-sm shadow-sm">❌ Erreur réseau.</div>`; }
             reloadBtn.innerHTML = `🔄 Recharger`; reloadBtn.disabled = false; chatBox.scrollTop = chatBox.scrollHeight;
         }
 
@@ -502,7 +563,7 @@
             chatHistory.push({ role: "user", content: question, time: timeStr });
             chatBox.innerHTML += `
             <div class="flex flex-col max-w-3xl self-end ml-auto w-full items-end mb-4">
-                <span class="text-[10px] text-gray-400 mb-1 px-1">${timeStr}</span>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${timeStr}</span>
                 <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${question}</div>
             </div>`;
             inputField.value = ""; autocompleteMenu.classList.add('hidden');
@@ -512,8 +573,8 @@
             const loadingId = "msg_" + Date.now();
             chatBox.innerHTML += `
             <div class="flex flex-col max-w-3xl self-start w-full mb-4" id="load-container-${loadingId}">
-                <span class="text-[10px] text-gray-400 mb-1 px-1">${timeStr}</span>
-                <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${timeStr}</span>
+                <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-brand dark:text-brand font-medium italic animate-pulse">🔍 MyRAG réfléchit...</div>
             </div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -536,12 +597,12 @@
                                 if (data.token) {
                                     if (isFirstToken) { 
                                         bubbleContainer.innerHTML = `
-                                        <span class="text-[10px] text-gray-400 mb-1 px-1">${timeStr}</span>
-                                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
-                                            <div class="prose max-w-none text-gray-700 text-base" id="text-${loadingId}"></div>
+                                        <span class="text-[10px] text-gray-400 dark:text-gray-500 mb-1 px-1">${timeStr}</span>
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm w-full">
+                                            <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-200 text-base" id="text-${loadingId}"></div>
                                             <div id="meta-${loadingId}">
                                                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 text-xs font-semibold bg-gray-100 text-gray-500 animate-pulse">
+                                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-700 text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 animate-pulse">
                                                         <span>⏳</span> Calcul de l'auto-évaluation...
                                                     </div>
                                                 </div>
@@ -564,17 +625,17 @@
                                     let evalBadge = "";
                                     if (data.metadata.confidence_self !== undefined) {
                                         let score = data.metadata.confidence_self;
-                                        let colorClass = "bg-gray-100 text-gray-800 border-gray-200";
+                                        let colorClass = "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300";
                                         let icon = "❔";
                                         
                                         if (typeof score === 'number') {
-                                            if (score >= 80) { colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200"; icon = "🟢"; }
-                                            else if (score >= 50) { colorClass = "bg-amber-50 text-amber-700 border-amber-200"; icon = "🟠"; }
-                                            else { colorClass = "bg-red-50 text-red-700 border-red-200"; icon = "🔴"; }
+                                            if (score >= 80) { colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"; icon = "🟢"; }
+                                            else if (score >= 50) { colorClass = "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"; icon = "🟠"; }
+                                            else { colorClass = "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"; icon = "🔴"; }
                                             score = score + "%";
                                         }
                                         
-                                        evalBadge = `<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 text-xs font-semibold ${colorClass}" title="Score d'Auto-évaluation Llama 3">
+                                        evalBadge = `<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-700 text-xs font-semibold ${colorClass}" title="Score d'Auto-évaluation Llama 3">
                                             <span>${icon}</span> Auto-Éval : ${score}
                                         </div>`;
                                     }
@@ -583,18 +644,20 @@
 
                                     let sourcesHtml = "";
                                     if (data.metadata.sources && data.metadata.sources.length > 0) {
-                                        const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 py-0.5 text-xs">• ${s}</li>`).join('');
-                                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 text-sm"><strong class="text-gray-500 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
+                                        const sourcesList = data.metadata.sources.map(s => `<li class="truncate text-gray-400 dark:text-gray-500 py-0.5 text-xs">• ${s}</li>`).join('');
+                                        sourcesHtml = `<div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm"><strong class="text-gray-500 dark:text-gray-400 font-semibold text-xs">📂 Fragments analysés :</strong><ul class="mt-1 space-y-0.5">${sourcesList}</ul></div>`;
                                     }
 
                                     const copyBtnId = `copy-${loadingId}`;
                                     metaContainer.innerHTML = sourcesHtml + `
                                         <div class="mt-3 flex flex-wrap items-center gap-2">
                                             ${evalBadge}
-                                            <div class="text-gray-400 text-[10px] font-mono bg-white p-1.5 rounded inline-block border border-gray-100">${statsString}</div>
+                                            <div class="text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600">${statsString}</div>
                                         </div>
-                                        <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-2 justify-end">
-                                            <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
+                                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2 justify-end">
+                                            <button id="${copyBtnId}" onclick="copyToClipboard('${loadingId}', '${copyBtnId}')" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📋 Copier</button>
+                                            <button onclick="exportText()" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">💾 TXT</button>
+                                            <button onclick="exportPdf()" class="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm">📄 PDF</button>
                                         </div>`;
                                     
                                     saveSession(); 
