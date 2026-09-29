@@ -44,6 +44,7 @@ chain = prompt | model
 
 current_retriever = initial_retriever
 current_path = initial_path
+current_k = 10  # NOUVEAU : On stocke K globalement pour fixer le bug !
 
 class ChatRequest(BaseModel):
     question: str
@@ -52,10 +53,6 @@ class ChatRequest(BaseModel):
 class SourceRequest(BaseModel):
     path: str
 
-class ModelRequest(BaseModel):
-    model: str
-
-# --- NOUVEAU : Modèle pour la taille des fragments ---
 class ChunksRequest(BaseModel):
     k: int
 
@@ -98,7 +95,7 @@ def pick_file():
 
 @app.post("/chat")
 def chat(request: ChatRequest):
-    global current_retriever, current_path
+    global current_retriever, current_path, current_k
 
     def event_generator():
         try:
@@ -111,14 +108,12 @@ def chat(request: ChatRequest):
             if not formatted_history:
                 formatted_history = "(Début de la conversation. Aucun historique pour le moment.)"
 
-            # 1. Recherche du contexte
             relevant_docs = current_retriever.invoke(request.question)
             context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
             sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
             
             full_answer = ""
             
-            # 2. Transmission en streaming
             for chunk in chain.stream({
                 "context": context_text, 
                 "question": request.question,
@@ -127,9 +122,7 @@ def chat(request: ChatRequest):
                 full_answer += chunk 
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
             
-            # ==========================================
             # 3A. AUTO-ÉVALUATION (Self-Reflection)
-            # ==========================================
             eval_template = """Tu es un juge IA très strict. 
             Contexte extrait : {context}
             Réponse générée : {answer}
@@ -149,9 +142,7 @@ def chat(request: ChatRequest):
             except Exception:
                 confidence_self = "Err"
 
-            # ==========================================
             # 3B. ÉVALUATION RAGAS (La Triade)
-            # ==========================================
             ragas_template = """Tu es un évaluateur expert de systèmes IA (RAGAS).
             Analyse cette interaction :
             QUESTION : {question}
@@ -177,7 +168,6 @@ def chat(request: ChatRequest):
                 ragas_scores = {"context": c_rel, "faithfulness": faith, "answer": a_rel}
             except Exception:
                 ragas_scores = {"context": "Err", "faithfulness": "Err", "answer": "Err"}
-            # ==========================================
 
             elapsed_time = round(time.time() - start_time, 2)
             
@@ -187,7 +177,8 @@ def chat(request: ChatRequest):
                     'time': elapsed_time,
                     'current_path': current_path,
                     'confidence_self': confidence_self,
-                    'ragas_scores': ragas_scores
+                    'ragas_scores': ragas_scores,
+                    'k_used': current_k # FIX: On envoie la variable garantie !
                 }
             }
             yield f"data: {json.dumps(meta_payload)}\n\n"
@@ -199,7 +190,7 @@ def chat(request: ChatRequest):
 
 @app.post("/change_source")
 def change_source(request: SourceRequest):
-    global current_retriever, current_path
+    global current_retriever, current_path, current_k
     
     try:
         current_retriever = None
@@ -219,53 +210,22 @@ def change_source(request: SourceRequest):
             persist_directory=VECTOR_STORE_DIR, 
             embedding_function=embeddings
         )
-        current_retriever = vector_store.as_retriever(search_kwargs={"k": 10})
+        # FIX: On garde le réglage utilisateur au lieu de forcer k=10
+        current_retriever = vector_store.as_retriever(search_kwargs={"k": current_k})
         current_path = request.path
         
         return {"status": "success", "message": f"Base reconstruite depuis {request.path} !"}
     except subprocess.CalledProcessError as e:
         return {"status": "error", "message": f"Erreur : {e.stderr}"}
 
-@app.get("/stats")
-def get_stats():
-    global current_retriever, current_path, model
-    chunks_count = 0
-    k_current = 10
-    if current_retriever:
-        if hasattr(current_retriever, "vectorstore"):
-            try: chunks_count = current_retriever.vectorstore._collection.count()
-            except Exception: pass
-        if hasattr(current_retriever, "search_kwargs"):
-            k_current = current_retriever.search_kwargs.get("k", 10)
-            
-    return {
-        "path": current_path, 
-        "chunks": chunks_count, 
-        "model": model.model,
-        "k": k_current
-    }
-
-@app.post("/set_model")
-def set_model(request: ModelRequest):
-    global model, chain, prompt
-    try:
-        model = OllamaLLM(model=request.model)
-        chain = prompt | model
-        return {"status": "success", "model": request.model}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-# --- NOUVEAU : Route pour modifier le nombre de fragments (k) ---
 @app.post("/set_chunks")
 def set_chunks(request: ChunksRequest):
-    global current_retriever
+    global current_k, current_retriever
     try:
+        current_k = request.k
         if current_retriever:
-            if not hasattr(current_retriever, "search_kwargs") or current_retriever.search_kwargs is None:
-                current_retriever.search_kwargs = {}
-            current_retriever.search_kwargs["k"] = request.k
-            return {"status": "success", "k": request.k}
-        else:
-            return {"status": "error", "message": "Aucune base chargée."}
+            # FIX: Force la mise à jour stricte du dictionnaire LangChain
+            current_retriever.search_kwargs = {"k": current_k}
+        return {"status": "success", "k": current_k}
     except Exception as e:
         return {"status": "error", "message": str(e)}
