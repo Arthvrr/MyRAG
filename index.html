@@ -77,7 +77,6 @@
                     </h1>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="hidden sm:inline-block text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-full font-mono font-medium border border-gray-200 dark:border-gray-700">Cmds: /help</span>
                     <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xl">🌙</button>
                 </div>
             </header>
@@ -125,7 +124,13 @@
     </div>
 
     <script>
-        marked.setOptions({ highlight: function(code, lang) { const language = hljs.getLanguage(lang) ? lang : 'plaintext'; return hljs.highlight(code, { language }).value; }, langPrefix: 'hljs language-' });
+        marked.setOptions({
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
 
         // --- GESTION DU REDIMENSIONNEMENT DE LA SIDEBAR ---
         const resizer = document.getElementById('sidebar-resizer');
@@ -159,7 +164,7 @@
         let currentSessionId = "chat_" + Date.now();
         let isIncognito = false;
         
-        // --- NOUVEAU : TAILLE DE LA FENÊTRE DE CONTEXTE ---
+        // --- TAILLE DE LA FENÊTRE DE CONTEXTE ---
         let contextWindowSize = 6;
 
         const chatBox = document.getElementById("chat");
@@ -479,7 +484,7 @@
             html2pdf().set({ margin: 15, filename: `MyRAG_Historique_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(pdfContainer).save().then(() => showToast("Historique PDF téléchargé !")).catch(() => showToast("Erreur PDF", "error"));
         }
 
-        // --- NOUVEAU : COMMANDE /WINDOW ---
+        // --- COMMANDES SLASH ---
         const slashCommands = [
             { cmd: '/clear', desc: 'Vider le chat et effacer la mémoire' },
             { cmd: '/reload', desc: 'Recharger la base de données actuelle' },
@@ -487,7 +492,7 @@
             { cmd: '/file', desc: 'Ouvrir le Finder (Choisir un fichier)' },
             { cmd: '/change', desc: 'Cibler un chemin précis (/change /Users/...)' },
             { cmd: '/window', desc: 'Modifier la mémoire (ex: /window 10)' },
-            { cmd: '/help', desc: 'Afficher la liste des commandes' }
+            { cmd: '/chunks', desc: 'Modifier le nb de fragments extraits (ex: /chunks 5)' }
         ];
 
         inputField.addEventListener('input', function() {
@@ -509,7 +514,7 @@
 
         function selectCommand(cmd) {
             autocompleteMenu.classList.add('hidden');
-            if (cmd === '/change' || cmd === '/window') { inputField.value = cmd + ' '; inputField.focus(); } 
+            if (cmd === '/change' || cmd === '/window' || cmd === '/chunks') { inputField.value = cmd + ' '; inputField.focus(); } 
             else { inputField.value = cmd; processSlashCommand(cmd); }
         }
 
@@ -539,7 +544,6 @@
                 customPathInput.value = args.slice(1).join(" ");
                 customPathInput.classList.remove("hidden"); sourceSelect.value = "custom_folder"; changeSource();
             }
-            // --- NOUVEAU : TRAITEMENT DE LA COMMANDE WINDOW ---
             else if (cmd === '/window') {
                 if (args.length > 1) {
                     const newSize = parseInt(args[1], 10);
@@ -555,21 +559,23 @@
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
-            else if (cmd === '/help') {
-                chatHistory.push({ role: "user", content: "/help", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
-                const helpHtml = `
-                <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-5 rounded-2xl rounded-tl-sm shadow-sm text-blue-800 dark:text-blue-300 leading-relaxed text-base w-full">
-                    <strong>🛠️ Commandes rapides disponibles :</strong><br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/clear</code> : Vider le chat<br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/reload</code> : Recharger la base courante<br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/folder</code> : Ouvrir le Finder (Dossier)<br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/file</code> : Ouvrir le Finder (Fichier)<br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis<br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/window [X]</code> : Modifier la mémoire (0 à 50)
-                </div>`;
-                chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full mb-4">${helpHtml}</div>`;
+            // --- NOUVEAU : TRAITEMENT DE LA COMMANDE CHUNKS ---
+            else if (cmd === '/chunks') {
+                if (args.length > 1) {
+                    const newK = parseInt(args[1], 10);
+                    if (!isNaN(newK) && newK > 0 && newK <= 50) {
+                        try {
+                            let res = await fetch("/set_chunks", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({k: newK})});
+                            let data = await res.json();
+                            if (data.status === "success") { 
+                                showToast(`Nombre de fragments réglé sur ${newK}`, "success"); 
+                                chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full mb-4"><div class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl rounded-tl-sm shadow-sm text-emerald-800 dark:text-emerald-300">⚙️ Le RAG lira désormais les <strong>${newK}</strong> fragments les plus pertinents pour te répondre.</div></div>`; 
+                            } 
+                            else { showToast(`Erreur : ${data.message}`, "error"); }
+                        } catch(e) { showToast("Erreur API", "error"); }
+                    } else { showToast("Erreur : Spécifiez un nombre entre 1 et 50.", "error"); }
+                } else { showToast("Précisez un nombre (ex: /chunks 5)", "warning"); } 
                 chatBox.scrollTop = chatBox.scrollHeight;
-                showToast("Menu d'aide affiché", "info");
             }
             else showToast(`Commande invalide : ${cmd}`, "error");
         }
@@ -608,7 +614,6 @@
 
             const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            // --- NOUVEAU : UTILISATION DE LA VARIABLE GLOBALE contextWindowSize ---
             const historyToSend = contextWindowSize > 0 ? chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-contextWindowSize) : [];
 
             chatHistory.push({ role: "user", content: question, time: timeStr });

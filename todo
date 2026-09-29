@@ -4,6 +4,7 @@
 - reranking
 - créer icone site web
 - afficher nombre de tokens utilisés
+- rendre possible utilisation myrag online (jsp si possible ?)
 
 - Calibration et Score de Confiance : Pour limiter les hallucinations, tu pourrais implémenter une logique de calibration sur tes modèles. L'idée serait d'évaluer la certitude de la réponse générée face aux documents extraits, et d'afficher un petit badge de "confiance" (ex: 🟢 Haute, 🔴 Faible) à côté de chaque message.
 - Reranking (Reclassement) : Quand tu as des centaines de documents, extraire les 10 meilleurs morceaux ne suffit pas toujours. Ajouter un modèle de Cross-Encoder léger juste avant de donner le texte au LLM permet de trier les morceaux trouvés par pertinence absolue.

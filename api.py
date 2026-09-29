@@ -55,6 +55,10 @@ class SourceRequest(BaseModel):
 class ModelRequest(BaseModel):
     model: str
 
+# --- NOUVEAU : Modèle pour la taille des fragments ---
+class ChunksRequest(BaseModel):
+    k: int
+
 @app.get("/", response_class=HTMLResponse)
 def read_root():
     with open("index.html", "r", encoding="utf-8") as f:
@@ -226,16 +230,19 @@ def change_source(request: SourceRequest):
 def get_stats():
     global current_retriever, current_path, model
     chunks_count = 0
-    if current_retriever and hasattr(current_retriever, "vectorstore"):
-        try:
-            chunks_count = current_retriever.vectorstore._collection.count()
-        except Exception:
-            pass
+    k_current = 10
+    if current_retriever:
+        if hasattr(current_retriever, "vectorstore"):
+            try: chunks_count = current_retriever.vectorstore._collection.count()
+            except Exception: pass
+        if hasattr(current_retriever, "search_kwargs"):
+            k_current = current_retriever.search_kwargs.get("k", 10)
             
     return {
         "path": current_path, 
         "chunks": chunks_count, 
-        "model": model.model
+        "model": model.model,
+        "k": k_current
     }
 
 @app.post("/set_model")
@@ -245,5 +252,20 @@ def set_model(request: ModelRequest):
         model = OllamaLLM(model=request.model)
         chain = prompt | model
         return {"status": "success", "model": request.model}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# --- NOUVEAU : Route pour modifier le nombre de fragments (k) ---
+@app.post("/set_chunks")
+def set_chunks(request: ChunksRequest):
+    global current_retriever
+    try:
+        if current_retriever:
+            if not hasattr(current_retriever, "search_kwargs") or current_retriever.search_kwargs is None:
+                current_retriever.search_kwargs = {}
+            current_retriever.search_kwargs["k"] = request.k
+            return {"status": "success", "k": request.k}
+        else:
+            return {"status": "error", "message": "Aucune base chargée."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
