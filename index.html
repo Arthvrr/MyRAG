@@ -56,7 +56,8 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-1 pr-4" id="chat-list">
-                </div>
+                <!-- Historique injecté ici -->
+            </div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-center text-gray-500 dark:text-gray-400">
                 MyRAG v1.0 • Arthur Louette
@@ -76,6 +77,7 @@
                     </h1>
                 </div>
                 <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline-block text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-3 py-1.5 rounded-full font-mono font-medium border border-gray-200 dark:border-gray-700">Cmds: /help</span>
                     <button onclick="toggleTheme()" id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xl">🌙</button>
                 </div>
             </header>
@@ -123,13 +125,7 @@
     </div>
 
     <script>
-        marked.setOptions({
-            highlight: function(code, lang) {
-                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-                return hljs.highlight(code, { language }).value;
-            },
-            langPrefix: 'hljs language-'
-        });
+        marked.setOptions({ highlight: function(code, lang) { const language = hljs.getLanguage(lang) ? lang : 'plaintext'; return hljs.highlight(code, { language }).value; }, langPrefix: 'hljs language-' });
 
         // --- GESTION DU REDIMENSIONNEMENT DE LA SIDEBAR ---
         const resizer = document.getElementById('sidebar-resizer');
@@ -162,6 +158,9 @@
         const chatMemories = {};
         let currentSessionId = "chat_" + Date.now();
         let isIncognito = false;
+        
+        // --- NOUVEAU : TAILLE DE LA FENÊTRE DE CONTEXTE ---
+        let contextWindowSize = 6;
 
         const chatBox = document.getElementById("chat");
         const inputField = document.getElementById("question");
@@ -279,7 +278,6 @@
                         statsHtml = `<div class="text-gray-400 text-[10px] font-mono bg-white dark:bg-gray-700/50 p-1.5 rounded inline-block border border-gray-100 dark:border-gray-600 shadow-sm">${msg.meta.stats}</div>`;
                     }
 
-                    // Génération dynamique des badges
                     let { evalBadge, ragasGrid } = generateEvalsHtml(msg.meta?.confidence_self, msg.meta?.ragas_scores);
 
                     const copyBtnId = `copy-${loadingId}`;
@@ -442,7 +440,6 @@
             setTimeout(() => { toast.classList.add('opacity-0', 'scale-95'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        // --- COMMANDES EXPORT TXT ET PDF ---
         async function exportText() {
             if (chatHistory.length === 0) return showToast("La conversation est vide", "error");
             let rawText = "🧠 Historique de conversation MyRAG\n Date : " + new Date().toLocaleString() + "\n====================================================\n\n";
@@ -482,12 +479,14 @@
             html2pdf().set({ margin: 15, filename: `MyRAG_Historique_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(pdfContainer).save().then(() => showToast("Historique PDF téléchargé !")).catch(() => showToast("Erreur PDF", "error"));
         }
 
+        // --- NOUVEAU : COMMANDE /WINDOW ---
         const slashCommands = [
             { cmd: '/clear', desc: 'Vider le chat et effacer la mémoire' },
             { cmd: '/reload', desc: 'Recharger la base de données actuelle' },
             { cmd: '/folder', desc: 'Ouvrir le Finder (Choisir un dossier)' },
             { cmd: '/file', desc: 'Ouvrir le Finder (Choisir un fichier)' },
             { cmd: '/change', desc: 'Cibler un chemin précis (/change /Users/...)' },
+            { cmd: '/window', desc: 'Modifier la mémoire (ex: /window 10)' },
             { cmd: '/help', desc: 'Afficher la liste des commandes' }
         ];
 
@@ -510,7 +509,7 @@
 
         function selectCommand(cmd) {
             autocompleteMenu.classList.add('hidden');
-            if (cmd === '/change') { inputField.value = cmd + ' '; inputField.focus(); } 
+            if (cmd === '/change' || cmd === '/window') { inputField.value = cmd + ' '; inputField.focus(); } 
             else { inputField.value = cmd; processSlashCommand(cmd); }
         }
 
@@ -540,6 +539,22 @@
                 customPathInput.value = args.slice(1).join(" ");
                 customPathInput.classList.remove("hidden"); sourceSelect.value = "custom_folder"; changeSource();
             }
+            // --- NOUVEAU : TRAITEMENT DE LA COMMANDE WINDOW ---
+            else if (cmd === '/window') {
+                if (args.length > 1) {
+                    const newSize = parseInt(args[1], 10);
+                    if (!isNaN(newSize) && newSize >= 0 && newSize <= 50) {
+                        contextWindowSize = newSize;
+                        showToast(`Mémoire réglée sur ${newSize}`, "success");
+                        chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full mb-4"><div class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl rounded-tl-sm shadow-sm text-emerald-800 dark:text-emerald-300">⚙️ La taille de la fenêtre de contexte est maintenant de <strong>${newSize}</strong> message(s).</div></div>`;
+                    } else {
+                        showToast("Erreur : Spécifiez un nombre entre 0 et 50.", "error");
+                    }
+                } else {
+                    showToast("Précisez une taille (ex: /window 10)", "warning");
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
             else if (cmd === '/help') {
                 chatHistory.push({ role: "user", content: "/help", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
                 const helpHtml = `
@@ -549,7 +564,8 @@
                     <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/reload</code> : Recharger la base courante<br><br>
                     <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/folder</code> : Ouvrir le Finder (Dossier)<br><br>
                     <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/file</code> : Ouvrir le Finder (Fichier)<br><br>
-                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/change [chemin]</code> : Cibler un chemin précis<br><br>
+                    <code class="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm text-brand font-bold">/window [X]</code> : Modifier la mémoire (0 à 50)
                 </div>`;
                 chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-start w-full mb-4">${helpHtml}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -591,7 +607,9 @@
             if (question.startsWith("/")) { processSlashCommand(question); return; }
 
             const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const historyToSend = chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-6);
+            
+            // --- NOUVEAU : UTILISATION DE LA VARIABLE GLOBALE contextWindowSize ---
+            const historyToSend = contextWindowSize > 0 ? chatHistory.map(msg => ({ role: msg.role, content: msg.content })).slice(-contextWindowSize) : [];
 
             chatHistory.push({ role: "user", content: question, time: timeStr });
             chatBox.innerHTML += `
@@ -655,7 +673,6 @@
                                     const speed = (wordCount / data.metadata.time).toFixed(1);
                                     const statsString = `⏱️ ${data.metadata.time}s | ⚡ ${speed} mots/s | 📏 ${wordCount} mots | 📍 ${data.metadata.current_path}`;
 
-                                    // Appel de la fonction combinée pour générer les badges et la grille
                                     let { evalBadge, ragasGrid } = generateEvalsHtml(data.metadata.confidence_self, data.metadata.ragas_scores);
 
                                     chatHistory.push({ id: loadingId, role: "ai", content: accumulatedAnswer, time: timeStr, meta: { sources: data.metadata.sources, stats: statsString, confidence_self: data.metadata.confidence_self, ragas_scores: data.metadata.ragas_scores } });
