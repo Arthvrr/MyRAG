@@ -20,7 +20,6 @@ app = FastAPI(title="MyRAG Streaming API")
 
 model = OllamaLLM(model="llama3") 
 
-# NOUVEAU : On ajoute {chat_history} au prompt !
 template = """Tu es MyRAG, l'assistant personnel d'Arthur.
 
 Voici l'historique de votre conversation récente (mémoire) :
@@ -46,13 +45,15 @@ chain = prompt | model
 current_retriever = initial_retriever
 current_path = initial_path
 
-# NOUVEAU : On ajoute "history" à la requête attendue
 class ChatRequest(BaseModel):
     question: str
     history: list = [] 
 
 class SourceRequest(BaseModel):
     path: str
+
+class ModelRequest(BaseModel):
+    model: str
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -106,16 +107,11 @@ def chat(request: ChatRequest):
             if not formatted_history:
                 formatted_history = "(Début de la conversation. Aucun historique pour le moment.)"
 
-            # 1. Aiguilleur (Excel vs ChromaDB)
-            if os.path.isfile(current_path) and current_path.lower().endswith(('.csv', '.xlsx')):
-                context_text = get_tabular_context(current_path)
-                sources_uniques = [current_path]
-            else:
-                relevant_docs = current_retriever.invoke(request.question)
-                context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
-                sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
+            # 1. Recherche du contexte
+            relevant_docs = current_retriever.invoke(request.question)
+            context_text = "\n\n".join([doc.page_content for doc in relevant_docs])
+            sources_uniques = list(set([doc.metadata.get('source', 'Source inconnue') for doc in relevant_docs]))
             
-            # Variable pour stocker la réponse complète afin de pouvoir l'évaluer
             full_answer = ""
             
             # 2. Transmission en streaming
@@ -124,11 +120,11 @@ def chat(request: ChatRequest):
                 "question": request.question,
                 "chat_history": formatted_history
             }):
-                full_answer += chunk # On capture la réponse en direct
+                full_answer += chunk 
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
             
             # ==========================================
-            # 3. NOUVEAU : AUTO-ÉVALUATION (Self-Reflection)
+            # 3A. AUTO-ÉVALUATION (Self-Reflection)
             # ==========================================
             eval_template = """Tu es un juge IA très strict. 
             Contexte extrait : {context}
@@ -143,13 +139,40 @@ def chat(request: ChatRequest):
             eval_chain = eval_prompt | model
             
             try:
-                # On lance l'évaluation en silence
                 raw_eval = eval_chain.invoke({"context": context_text, "answer": full_answer})
-                # On extrait le chiffre avec Regex pour éviter les bugs si le LLM bavarde
                 match = re.search(r'["\']?score["\']?\s*:\s*(\d+)', raw_eval, re.IGNORECASE)
                 confidence_self = int(match.group(1)) if match else "N/A"
-            except Exception as e:
+            except Exception:
                 confidence_self = "Err"
+
+            # ==========================================
+            # 3B. ÉVALUATION RAGAS (La Triade)
+            # ==========================================
+            ragas_template = """Tu es un évaluateur expert de systèmes IA (RAGAS).
+            Analyse cette interaction :
+            QUESTION : {question}
+            CONTEXTE RETROUVÉ : {context}
+            RÉPONSE GÉNÉRÉE : {answer}
+            
+            Évalue les 3 métriques suivantes de 0 à 100 :
+            1. context_relevance : Le contexte contient-il les informations pour répondre à la question ?
+            2. faithfulness : La réponse est-elle strictement basée sur le contexte (sans hallucinations) ?
+            3. answer_relevance : La réponse répond-elle directement à la question posée ?
+            
+            Tu DOIS répondre UNIQUEMENT avec un objet JSON valide. Exemple :
+            {{"context_relevance": 90, "faithfulness": 100, "answer_relevance": 85}}
+            """
+            ragas_prompt = ChatPromptTemplate.from_template(ragas_template)
+            ragas_chain = ragas_prompt | model
+            
+            try:
+                raw_ragas = ragas_chain.invoke({"question": request.question, "context": context_text, "answer": full_answer})
+                c_rel = int(re.search(r'"context_relevance"\s*:\s*(\d+)', raw_ragas, re.IGNORECASE).group(1))
+                faith = int(re.search(r'"faithfulness"\s*:\s*(\d+)', raw_ragas, re.IGNORECASE).group(1))
+                a_rel = int(re.search(r'"answer_relevance"\s*:\s*(\d+)', raw_ragas, re.IGNORECASE).group(1))
+                ragas_scores = {"context": c_rel, "faithfulness": faith, "answer": a_rel}
+            except Exception:
+                ragas_scores = {"context": "Err", "faithfulness": "Err", "answer": "Err"}
             # ==========================================
 
             elapsed_time = round(time.time() - start_time, 2)
@@ -159,7 +182,8 @@ def chat(request: ChatRequest):
                     'sources': sources_uniques,
                     'time': elapsed_time,
                     'current_path': current_path,
-                    'confidence_self': confidence_self # Ajout du score !
+                    'confidence_self': confidence_self,
+                    'ragas_scores': ragas_scores
                 }
             }
             yield f"data: {json.dumps(meta_payload)}\n\n"
@@ -197,3 +221,29 @@ def change_source(request: SourceRequest):
         return {"status": "success", "message": f"Base reconstruite depuis {request.path} !"}
     except subprocess.CalledProcessError as e:
         return {"status": "error", "message": f"Erreur : {e.stderr}"}
+
+@app.get("/stats")
+def get_stats():
+    global current_retriever, current_path, model
+    chunks_count = 0
+    if current_retriever and hasattr(current_retriever, "vectorstore"):
+        try:
+            chunks_count = current_retriever.vectorstore._collection.count()
+        except Exception:
+            pass
+            
+    return {
+        "path": current_path, 
+        "chunks": chunks_count, 
+        "model": model.model
+    }
+
+@app.post("/set_model")
+def set_model(request: ModelRequest):
+    global model, chain, prompt
+    try:
+        model = OllamaLLM(model=request.model)
+        chain = prompt | model
+        return {"status": "success", "model": request.model}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
