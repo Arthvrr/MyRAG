@@ -9,7 +9,7 @@ if [ -f "venv/bin/activate" ]; then
     source venv/bin/activate
 fi
 
-echo "🚀 Démarrage du serveur web MyRAG..."
+echo "🚀 Démarrage de MyRAG Studio..."
 
 (sleep 2 && open -a Safari http://127.0.0.1:8000) &
 
