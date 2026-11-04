@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import time
 import subprocess
@@ -17,6 +18,8 @@ from langchain_ollama import OllamaEmbeddings
 from vector import retriever as initial_retriever, USER_DOCS_PATH as initial_path, VECTOR_STORE_DIR
 
 app = FastAPI(title="MyRAG Streaming API")
+
+app.mount("/pics", StaticFiles(directory="pics"), name="pics")
 
 model = OllamaLLM(model="llama3") 
 

@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyRAG - Local AI</title>
+    <title>MyRAG Studio - Local AI</title>
     
+    <link rel="icon" type="image/x-icon" href="pics/logo.ico">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -33,6 +35,11 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
         #sidebar { min-width: 200px; max-width: 600px; }
+        
+        .footer-centered {
+            border-top: none;
+            background-color: transparent !important;
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 h-screen font-sans overflow-hidden">
@@ -43,7 +50,7 @@
 
         <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden transition-opacity sm:hidden"></div>
 
-        <aside id="sidebar" class="absolute sm:relative z-40 w-72 h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 transform -translate-x-full sm:translate-x-0 flex-shrink-0">
+        <aside id="sidebar" class="absolute sm:relative z-40 w-72 h-full bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 transform -translate-x-full sm:-ml-72 flex-shrink-0">
             <div id="sidebar-resizer" class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-brand/50 active:bg-brand transition-colors z-50"></div>
 
             <div class="p-4 flex gap-2 border-b border-gray-200 dark:border-gray-700 pr-3">
@@ -60,19 +67,20 @@
             </div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 text-xs text-center text-gray-500 dark:text-gray-400">
-                MyRAG v1.0 • Arthur Louette
+                MyRAG Studio v1.0 • Arthur Louette
             </div>
         </aside>
 
-        <div class="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 w-full min-w-0 transition-colors duration-300">
+        <div class="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 w-full min-w-0 transition-colors duration-300 relative">
             
-            <header class="border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex justify-between items-center gap-4 z-10 transition-colors duration-300">
+            <header class="border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm flex justify-between items-center gap-4 z-10 transition-colors duration-300 bg-white dark:bg-gray-900 relative">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleSidebar()" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
                     <h1 class="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-white truncate">
-                        <span>🧠</span> MyRAG <span class="text-brand font-light hidden sm:inline">Studio</span>
+                        <img src="/pics/logo.png" alt="MyRAG Logo" class="h-6 w-auto rounded-sm">
+                        <span>MyRAG</span> <span class="text-brand font-light hidden sm:inline">Studio</span>
                         <span id="incognito-badge" class="hidden text-xs bg-gray-800 text-white px-2 py-0.5 rounded-md font-mono">👻 Incognito</span>
                     </h1>
                 </div>
@@ -81,45 +89,51 @@
                 </div>
             </header>
 
-            <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 w-full mx-auto max-w-4xl pb-10">
-                <div class="flex flex-col max-w-3xl self-start w-full">
-                    <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">
-                        Bonjour Arthur ! Prêt pour une nouvelle discussion ? 🚀
-                    </div>
+            <div id="main-container" class="flex-1 flex flex-col h-full overflow-hidden relative">
+                
+                <div id="welcome-message" class="hidden flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-4 mt-[-10vh]">
+                     <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-8 text-center flex items-center justify-center gap-3 flex-wrap">
+                         <img src="/pics/logo.png" alt="MyRAG Logo" class="h-8 sm:h-10 w-auto rounded-md shadow-sm">
+                         Bonjour Arthur ! Prêt pour une nouvelle discussion ? 🚀
+                     </h2>
                 </div>
-            </main>
 
-            <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 flex justify-center transition-colors duration-300">
-                <div class="flex w-full max-w-4xl gap-3 items-end relative">
-                    
-                    <div class="relative flex items-center">
-                        <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
-                            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
-                            <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
-                                <option value="./data" class="dark:bg-gray-800">📁 ./data (Défaut)</option>
-                                <option value="custom_folder" class="dark:bg-gray-800">📁 Parcourir un dossier...</option>
-                                <option value="custom_file" class="dark:bg-gray-800 text-brand font-bold">📄 Parcourir un fichier...</option>
-                            </select>
-                            <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
-                            <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1"><span>🔄</span> Recharger</button>
+                <main id="chat" class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6 w-full mx-auto max-w-4xl pb-10">
+                    <!-- Les messages sont injectés ici -->
+                </main>
+
+                <footer id="chat-footer" class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 flex justify-center transition-all duration-300 ease-in-out w-full z-20">
+                    <div class="flex w-full max-w-4xl gap-3 items-end relative">
+                        
+                        <div class="relative flex items-center">
+                            <div id="source-menu" class="hidden absolute bottom-16 left-0 mb-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 z-50">
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">📂 Base Vectorielle</span>
+                                <select id="source-select" class="bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none text-gray-700 dark:text-gray-100 cursor-pointer font-medium p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 w-full" onchange="handleSourceChange()">
+                                    <option value="./data" class="dark:bg-gray-800">📁 ./data (Défaut)</option>
+                                    <option value="custom_folder" class="dark:bg-gray-800">📁 Parcourir un dossier...</option>
+                                    <option value="custom_file" class="dark:bg-gray-800 text-brand font-bold">📄 Parcourir un fichier...</option>
+                                </select>
+                                <input type="text" id="custom-path-input" placeholder="Chemin sélectionné..." class="hidden bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none w-full shadow-sm">
+                                <button onclick="changeSource()" id="reload-btn" class="bg-gray-800 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm w-full mt-1"><span>🔄</span> Recharger</button>
+                            </div>
+
+                            <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white bg-gray-50 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm border border-gray-200 dark:border-gray-700" title="Gérer la source">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            </button>
                         </div>
 
-                        <button onclick="toggleSourceMenu()" id="plus-btn" class="p-3 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white bg-gray-50 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors flex items-center justify-center h-[52px] w-[52px] shadow-sm border border-gray-200 dark:border-gray-700" title="Gérer la source">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <div class="relative flex-1">
+                            <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden z-50"></div>
+                            <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
+                            <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1">🎤</button>
+                        </div>
+                        
+                        <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center justify-center h-[52px] gap-2 flex-shrink-0">
+                            <span class="hidden sm:inline">Envoyer</span> <span class="text-xl">↗</span>
                         </button>
                     </div>
-
-                    <div class="relative flex-1">
-                        <div id="autocomplete-menu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg flex flex-col overflow-hidden z-50"></div>
-                        <input type="text" id="question" placeholder="Pose une question ou tape /..." autocomplete="off" onkeypress="handleKeyPress(event)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-brand dark:focus:border-brand rounded-xl px-5 py-3.5 pr-12 h-[52px] text-gray-700 dark:text-gray-100 outline-none transition-all shadow-sm">
-                        <button id="mic-btn" onclick="toggleDictation()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-brand transition-colors text-xl p-1">🎤</button>
-                    </div>
-                    
-                    <button onclick="askQuestion()" class="bg-brand hover:bg-brandDark text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md flex items-center justify-center h-[52px] gap-2 flex-shrink-0">
-                        <span class="hidden sm:inline">Envoyer</span> <span class="text-xl">↗</span>
-                    </button>
-                </div>
-            </footer>
+                </footer>
+            </div>
         </div>
     </div>
 
@@ -164,7 +178,6 @@
         let currentSessionId = "chat_" + Date.now();
         let isIncognito = false;
         
-        // --- TAILLE DE LA FENÊTRE DE CONTEXTE ---
         let contextWindowSize = 6;
 
         const chatBox = document.getElementById("chat");
@@ -178,6 +191,32 @@
         const micBtn = document.getElementById("mic-btn");
         const mobileOverlay = document.getElementById("mobile-overlay");
         const incognitoBadge = document.getElementById("incognito-badge");
+        const chatFooter = document.getElementById("chat-footer"); 
+        const welcomeMessage = document.getElementById("welcome-message");
+
+        function updateLayout() {
+            if (chatHistory.length === 0) {
+                chatBox.classList.add('hidden');
+                welcomeMessage.classList.remove('hidden');
+                welcomeMessage.classList.add('flex');
+                
+                chatFooter.classList.add('footer-centered');
+                chatFooter.style.position = 'absolute';
+                chatFooter.style.top = '50%';
+                chatFooter.style.transform = 'translateY(-50%)';
+                chatFooter.style.marginTop = '2rem'; 
+            } else {
+                chatBox.classList.remove('hidden');
+                welcomeMessage.classList.add('hidden');
+                welcomeMessage.classList.remove('flex');
+                
+                chatFooter.classList.remove('footer-centered');
+                chatFooter.style.position = 'static';
+                chatFooter.style.top = 'auto';
+                chatFooter.style.transform = 'none';
+                chatFooter.style.marginTop = '0';
+            }
+        }
 
         // --- GÉNÉRATION COMBINÉE AUTO-ÉVAL ET RAGAS ---
         function generateEvalsHtml(confidence_self, ragas_scores) {
@@ -226,7 +265,7 @@
             return { evalBadge, ragasGrid };
         }
 
-        // --- NOUVEAU : Fonction utilitaire pour enregistrer les commandes systèmes de façon persistante et UNIFORME ---
+        // --- FONCTION UTILITAIRE POUR ENREGISTRER LES COMMANDES SYSTÈMES ---
         function logSystemMessage(cmdStr, messageText, isSuccess = true) {
             const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
@@ -253,6 +292,7 @@
             
             saveSession();
             chatBox.scrollTop = chatBox.scrollHeight;
+            updateLayout();
         }
 
         function saveSession() {
@@ -347,6 +387,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
             if (window.innerWidth < 640) toggleSidebar();
             renderSidebar();
+            updateLayout();
         }
 
         function togglePinSession(id, event) {
@@ -409,16 +450,17 @@
             `).join('');
         }
 
-        function clearUI(message) {
+        function clearUI() {
             chatHistory.length = 0;
             for (let key in chatMemories) delete chatMemories[key];
-            chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">${message}</div></div>`;
+            chatBox.innerHTML = ``;
+            updateLayout();
         }
 
         function startNewChat() {
             currentSessionId = "chat_" + Date.now();
             isIncognito = false; incognitoBadge.classList.add("hidden");
-            clearUI("Bonjour Arthur ! Prêt pour une nouvelle discussion ? 🚀");
+            clearUI();
             renderSidebar();
             if (window.innerWidth < 640 && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
         }
@@ -426,7 +468,8 @@
         function startIncognitoChat() {
             currentSessionId = "chat_ghost_" + Date.now();
             isIncognito = true; incognitoBadge.classList.remove("hidden");
-            clearUI("👻 <strong>Mode Incognito activé.</strong> Cette discussion ne sera enregistrée nulle part et s'effacera à la fermeture.");
+            clearUI();
+            logSystemMessage(null, "👻 <strong>Mode Incognito activé.</strong> Cette discussion ne sera enregistrée nulle part et s'effacera à la fermeture.", false);
             renderSidebar();
             if (window.innerWidth < 640 && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
         }
@@ -447,9 +490,7 @@
 
         window.onload = () => { 
             renderSidebar();
-            let allChats = JSON.parse(localStorage.getItem('myrag_chats') || '[]');
-            if (allChats.length > 0) loadSession(allChats[0].id);
-            else startNewChat();
+            startNewChat(); // Forcer une nouvelle page blanche à chaque lancement
             
             if (document.documentElement.classList.contains('dark')) {
                 document.getElementById('theme-toggle').innerHTML = "☀️";
@@ -572,8 +613,8 @@
             if (cmd === '/clear') {
                 chatHistory.length = 0;
                 for (let key in chatMemories) delete chatMemories[key];
-                chatBox.innerHTML = `<div class="flex flex-col max-w-3xl self-start w-full"><div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-700 dark:text-gray-200 leading-relaxed text-base">Bonjour Arthur ! La conversation a été réinitialisée. 🚀</div></div>`;
-                saveSession(); showToast("Historique purgé", "warning");
+                chatBox.innerHTML = ``;
+                saveSession(); updateLayout(); showToast("Historique purgé", "warning");
             } 
             else if (cmd === '/reload') { showToast("Rechargement...", "info"); changeSource(commandStr); }
             else if (cmd === '/folder') { sourceSelect.value = "custom_folder"; handleSourceChange(commandStr); }
@@ -635,6 +676,14 @@
             let targetPath = sourceSelect.value.startsWith("custom") ? customPathInput.value : "./data";
             reloadBtn.innerHTML = `⏳`; reloadBtn.disabled = true; sourceMenu.classList.add("hidden"); 
             const sysId = "sys-" + Date.now();
+            
+            // On s'assure que le chatBox est visible pour afficher le loading
+            if(chatBox.classList.contains('hidden')) {
+                 chatBox.classList.remove('hidden');
+                 welcomeMessage.classList.add('hidden');
+                 welcomeMessage.classList.remove('flex');
+            }
+
             chatBox.innerHTML += `<div class="flex flex-col max-w-3xl self-center w-full my-4" id="${sysId}"><div class="bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 p-3 rounded-xl text-center text-sm shadow-sm animate-pulse">⚙️ Reconstruction depuis : ${targetPath}...</div></div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
             try {
@@ -673,8 +722,9 @@
                 <div class="bg-brand text-white p-4 rounded-2xl rounded-tr-sm shadow-sm text-base">${question}</div>
             </div>`;
             inputField.value = ""; autocompleteMenu.classList.add('hidden');
-            chatBox.scrollTop = chatBox.scrollHeight;
             saveSession();
+            updateLayout(); 
+            chatBox.scrollTop = chatBox.scrollHeight;
 
             const loadingId = "msg_" + Date.now();
             chatBox.innerHTML += `
@@ -727,7 +777,6 @@
                                     const wordCount = accumulatedAnswer.trim().split(/\s+/).filter(w => w.length > 0).length;
                                     const speed = (wordCount / data.metadata.time).toFixed(1);
                                     
-                                    // Utilisation correcte du K remonté par le backend
                                     const kUsed = data.metadata.k_used !== undefined ? data.metadata.k_used : 10;
                                     const statsString = `⏱️ ${data.metadata.time}s | ⚡ ${speed} mots/s | 📏 ${wordCount} mots | 🧠 Mém: ${contextWindowSize} msg | 🧩 Chunks: ${kUsed} | 📍 ${data.metadata.current_path}`;
 

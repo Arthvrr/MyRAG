@@ -1,8 +1,11 @@
 #!/bin/bash
 
-echo "🦙 Vérification et lancement d'Ollama..."
-# Lance l'application macOS Ollama en arrière-plan (sans bloquer le terminal)
-open -a Ollama
+if curl -s http://127.0.0.1:11434/api/tags > /dev/null; then
+    echo "✅ Ollama est déjà en cours d'exécution."
+else
+    echo "🦙 Démarrage d'Ollama..."
+    open -a Ollama
+fi
 
 if [ -f "venv/bin/activate" ]; then
     echo "🐍 Activation de l'environnement virtuel..."
